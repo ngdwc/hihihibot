@@ -30,7 +30,7 @@ const client = new Client({
   ],
 });
 
-client.once('ready', () => {
+client.once('clientReady', () => {
   console.log(`✅ Bot online: ${client.user!.tag}`);
   client.user!.setActivity('!help | RPG Economy', { type: 0 });
 });
