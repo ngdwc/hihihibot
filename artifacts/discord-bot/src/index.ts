@@ -13,6 +13,7 @@ import { handleBank } from './commands/bank.js';
 import { handleMine } from './commands/mine.js';
 import { handleSell } from './commands/sell.js';
 import { handleHelp } from './commands/help.js';
+import { handleAdminLevelSet, handleAdminLevelAdd, handleAdminSetMoney } from './commands/admin.js';
 
 if (!process.env.DISCORD_BOT_TOKEN) {
   throw new Error('DISCORD_BOT_TOKEN must be set');
@@ -174,6 +175,19 @@ client.on('messageCreate', async (message: Message) => {
       case 'h':
       case 'tro_giup':
         embed = await handleHelp(message);
+        break;
+
+      // ── Admin commands ────────────────────────────────────────────────────
+      case 'level':
+        if (args[0]?.toLowerCase() === 'set') {
+          embed = await handleAdminLevelSet(message, args.slice(1));
+        } else if (args[0]?.toLowerCase() === 'add') {
+          embed = await handleAdminLevelAdd(message, args.slice(1));
+        }
+        break;
+
+      case 'tien':
+        embed = await handleAdminSetMoney(message, args);
         break;
 
       default:
