@@ -595,6 +595,7 @@ export interface DbStockPosition {
   type: "long" | "short";
   amount: number;
   entry_price: number;
+  leverage: number;
   opened_at: Date;
 }
 
@@ -603,6 +604,7 @@ interface IStockPosition extends Document {
   type: "long" | "short";
   amount: number;
   entryPrice: number;
+  leverage: number;
   openedAt: Date;
 }
 
@@ -611,6 +613,7 @@ const StockPositionSchema = new Schema<IStockPosition>({
   type: { type: String, required: true },
   amount: { type: Number, required: true },
   entryPrice: { type: Number, required: true },
+  leverage: { type: Number, default: 1 },
   openedAt: { type: Date, default: Date.now },
 });
 const StockPositionModel = model<IStockPosition>("StockPosition", StockPositionSchema);
@@ -621,6 +624,7 @@ function toDbStock(doc: IStockPosition): DbStockPosition {
     type: doc.type,
     amount: doc.amount,
     entry_price: doc.entryPrice,
+    leverage: doc.leverage ?? 1,
     opened_at: doc.openedAt,
   };
 }
@@ -635,10 +639,11 @@ export async function openStockPosition(
   type: "long" | "short",
   amount: number,
   entryPrice: number,
+  leverage: number,
 ): Promise<boolean> {
   const existing = await StockPositionModel.findOne({ discordId });
   if (existing) return false;
-  await StockPositionModel.create({ discordId, type, amount, entryPrice });
+  await StockPositionModel.create({ discordId, type, amount, entryPrice, leverage });
   return true;
 }
 

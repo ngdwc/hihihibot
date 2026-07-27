@@ -8,6 +8,8 @@ import {
 } from "../db.js";
 import { fmt } from "../utils.js";
 
+const MAX_LEVERAGE = 10;
+
 async function getBtcPrice(): Promise<number> {
   const res = await fetch(
     "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd",
@@ -29,17 +31,28 @@ function parseMoney(arg: string, userMoney: number): number | null {
   return n;
 }
 
-function pnlInfo(
-  posType: "long" | "short",
+function parseLeverage(arg: string | undefined): number | null {
+  if (!arg) return 1;
+  const n = parseFloat(arg.replace("x", ""));
+  if (isNaN(n) || n < 1 || n > MAX_LEVERAGE) return null;
+  return Math.round(n);
+}
+
+/** PnL tính theo đòn bẩy, lỗ tối đa = vốn bỏ vào */
+function calcPnl(
+  type: "long" | "short",
   amount: number,
+  leverage: number,
   entryPrice: number,
   currentPrice: number,
 ): { pnl: number; pct: number } {
-  const pct =
-    posType === "long"
+  const rawPct =
+    type === "long"
       ? (currentPrice - entryPrice) / entryPrice
       : (entryPrice - currentPrice) / entryPrice;
-  return { pnl: Math.round(amount * pct), pct };
+  const pct = rawPct * leverage;
+  const pnl = Math.round(Math.max(-amount, amount * pct));
+  return { pnl, pct };
 }
 
 export async function handleStock(
@@ -49,7 +62,7 @@ export async function handleStock(
 ): Promise<EmbedBuilder> {
   const sub = args[0]?.toLowerCase();
 
-  // ── !ck (no args) — xem giá + vị thế ─────────────────────────────────────
+  // ── !ck — xem giá + vị thế ───────────────────────────────────────────────
   if (!sub) {
     let btcPrice: number;
     try {
@@ -65,33 +78,17 @@ export async function handleStock(
     const embed = new EmbedBuilder()
       .setColor("#F7931A")
       .setTitle("₿ Thị trường Bitcoin")
-      .addFields({
-        name: "💹 Giá BTC/USD",
-        value: fmtUsd(btcPrice),
-        inline: true,
-      });
+      .addFields({ name: "💹 Giá BTC/USD", value: fmtUsd(btcPrice), inline: true });
 
     if (pos) {
-      const { pnl, pct } = pnlInfo(
-        pos.type,
-        pos.amount,
-        pos.entry_price,
-        btcPrice,
-      );
+      const { pnl, pct } = calcPnl(pos.type, pos.amount, pos.leverage, pos.entry_price, btcPrice);
       const sign = pnl >= 0 ? "+" : "";
       embed
         .addFields(
-          {
-            name: "📊 Vị thế",
-            value: pos.type === "long" ? "🟢 LONG (Mua)" : "🔴 SHORT (Bán)",
-            inline: true,
-          },
+          { name: "📊 Vị thế", value: pos.type === "long" ? "🟢 LONG (Mua)" : "🔴 SHORT (Bán)", inline: true },
+          { name: "⚡ Đòn bẩy", value: `${pos.leverage}x`, inline: true },
           { name: "💰 Vốn", value: fmt(pos.amount), inline: true },
-          {
-            name: "📈 Giá vào",
-            value: fmtUsd(pos.entry_price),
-            inline: true,
-          },
+          { name: "📈 Giá vào", value: fmtUsd(pos.entry_price), inline: true },
           {
             name: "📉 PnL",
             value: `${sign}${fmt(pnl)} (${sign}${(pct * 100).toFixed(2)}%)`,
@@ -101,12 +98,8 @@ export async function handleStock(
         .setFooter({ text: "!ck close — đóng vị thế" });
     } else {
       embed
-        .addFields({
-          name: "📋 Vị thế",
-          value: "Chưa có vị thế",
-          inline: true,
-        })
-        .setFooter({ text: "!ck mua <tiền|all>  |  !ck ban <tiền|all>" });
+        .addFields({ name: "📋 Vị thế", value: "Chưa có vị thế", inline: true })
+        .setFooter({ text: "!ck mua <tiền|all> [đòn bẩy]  |  !ck ban <tiền|all> [đòn bẩy]" });
     }
     return embed;
   }
@@ -118,9 +111,7 @@ export async function handleStock(
       return new EmbedBuilder()
         .setColor("#FF4444")
         .setTitle("❌ Chưa có vị thế")
-        .setDescription(
-          "Dùng `!ck mua <tiền>` hoặc `!ck ban <tiền>` để mở vị thế.",
-        );
+        .setDescription("Dùng `!ck mua <tiền>` hoặc `!ck ban <tiền>` để mở vị thế.");
     }
 
     let btcPrice: number;
@@ -135,12 +126,7 @@ export async function handleStock(
 
     await closeStockPosition(user.discord_id);
 
-    const { pnl, pct } = pnlInfo(
-      pos.type,
-      pos.amount,
-      pos.entry_price,
-      btcPrice,
-    );
+    const { pnl, pct } = calcPnl(pos.type, pos.amount, pos.leverage, pos.entry_price, btcPrice);
     const returned = Math.max(0, pos.amount + pnl);
     await updateMoney(user.discord_id, returned);
 
@@ -151,11 +137,8 @@ export async function handleStock(
       .setColor(isWin ? "#00FF88" : "#FF4444")
       .setTitle(isWin ? "₿ Đóng vị thế — Thắng! 🎉" : "₿ Đóng vị thế — Thua 📉")
       .addFields(
-        {
-          name: "📊 Vị thế",
-          value: pos.type === "long" ? "🟢 LONG (Mua)" : "🔴 SHORT (Bán)",
-          inline: true,
-        },
+        { name: "📊 Vị thế", value: pos.type === "long" ? "🟢 LONG (Mua)" : "🔴 SHORT (Bán)", inline: true },
+        { name: "⚡ Đòn bẩy", value: `${pos.leverage}x`, inline: true },
         { name: "💰 Vốn ban đầu", value: fmt(pos.amount), inline: true },
         { name: "📈 Giá vào", value: fmtUsd(pos.entry_price), inline: true },
         { name: "📉 Giá đóng", value: fmtUsd(btcPrice), inline: true },
@@ -183,7 +166,7 @@ export async function handleStock(
       return new EmbedBuilder()
         .setColor("#FF4444")
         .setTitle("❌ Thiếu số tiền")
-        .setDescription("VD: `!ck mua 1000000` hoặc `!ck mua all`");
+        .setDescription("VD: `!ck mua 1000000 5` (5x đòn bẩy) hoặc `!ck mua all`");
     }
 
     const amount = parseMoney(amountArg, Number(user.money));
@@ -191,7 +174,7 @@ export async function handleStock(
       return new EmbedBuilder()
         .setColor("#FF4444")
         .setTitle("❌ Số tiền không hợp lệ")
-        .setDescription("VD: `!ck mua 500000` hoặc `!ck ban all`");
+        .setDescription("VD: `!ck mua 500000` hoặc `!ck ban all 3`");
     }
     if (amount < 1_000) {
       return new EmbedBuilder()
@@ -202,9 +185,15 @@ export async function handleStock(
       return new EmbedBuilder()
         .setColor("#FF4444")
         .setTitle("❌ Không đủ tiền")
-        .setDescription(
-          `Bạn chỉ có **${fmt(Number(user.money))}**. Dùng \`all\` để cược tất tay.`,
-        );
+        .setDescription(`Bạn chỉ có **${fmt(Number(user.money))}**. Dùng \`all\` để cược tất tay.`);
+    }
+
+    const leverage = parseLeverage(args[2]);
+    if (leverage === null) {
+      return new EmbedBuilder()
+        .setColor("#FF4444")
+        .setTitle("❌ Đòn bẩy không hợp lệ")
+        .setDescription(`Đòn bẩy từ **1x** đến **${MAX_LEVERAGE}x**. VD: \`!ck mua 1000000 5\``);
     }
 
     let btcPrice: number;
@@ -219,17 +208,14 @@ export async function handleStock(
 
     const type = sub === "mua" ? "long" : "short";
     await updateMoney(user.discord_id, -amount);
-    await openStockPosition(user.discord_id, type, amount, btcPrice);
+    await openStockPosition(user.discord_id, type, amount, btcPrice, leverage);
 
     return new EmbedBuilder()
       .setColor(type === "long" ? "#00FF88" : "#FF4444")
-      .setTitle(
-        type === "long"
-          ? "₿ Mở vị thế 🟢 LONG!"
-          : "₿ Mở vị thế 🔴 SHORT!",
-      )
+      .setTitle(type === "long" ? "₿ Mở vị thế 🟢 LONG!" : "₿ Mở vị thế 🔴 SHORT!")
       .addFields(
         { name: "💰 Vốn", value: fmt(amount), inline: true },
+        { name: "⚡ Đòn bẩy", value: `${leverage}x`, inline: true },
         { name: "📈 Giá BTC vào lệnh", value: fmtUsd(btcPrice), inline: true },
         {
           name: "📋 Chiến lược",
@@ -237,6 +223,11 @@ export async function handleStock(
             type === "long"
               ? "Thắng khi BTC **tăng** sau khi đóng"
               : "Thắng khi BTC **giảm** sau khi đóng",
+          inline: false,
+        },
+        {
+          name: "⚠️ Rủi ro",
+          value: `Đòn bẩy ${leverage}x — lãi/lỗ nhân ${leverage} lần, lỗ tối đa = vốn bỏ vào`,
           inline: false,
         },
       )
@@ -249,9 +240,10 @@ export async function handleStock(
     .setTitle("₿ Chứng khoán Bitcoin")
     .setDescription(
       "`!ck` — xem giá BTC + vị thế hiện tại\n" +
-        "`!ck mua <tiền|all>` — mở LONG (thắng khi BTC tăng)\n" +
-        "`!ck ban <tiền|all>` — mở SHORT (thắng khi BTC giảm)\n" +
+        `\`!ck mua <tiền|all> [đòn bẩy]\` — LONG (thắng khi BTC tăng)\n` +
+        `\`!ck ban <tiền|all> [đòn bẩy]\` — SHORT (thắng khi BTC giảm)\n` +
         "`!ck close` — đóng vị thế và nhận kết quả\n\n" +
+        `⚡ Đòn bẩy: 1x–${MAX_LEVERAGE}x (mặc định 1x) — lãi/lỗ nhân theo bội số\n` +
         "Lỗ tối đa = vốn bỏ vào (không âm hơn 0).",
     );
 }

@@ -55,7 +55,7 @@ export async function handleHelp(_message: Message): Promise<EmbedBuilder> {
         value: [
           "`!thien start` — Bắt đầu thiền",
           "`!thien stop` — Dừng thiền và nhận công đức",
-          "Mỗi 10 phút thiền = +1 công đức",
+          "Mỗi 30 phút thiền = +1 công đức",
         ].join("\n"),
       },
       {
