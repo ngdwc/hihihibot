@@ -43,6 +43,7 @@ import {
 } from "./commands/garden.js";
 import { handleTaixiu } from "./commands/taixiu.js";
 import { handleStock } from "./commands/stock.js";
+import { handleVirtueVault } from "./commands/virtue-vault.js";
 import { containsBadWord } from "./badwords.js";
 
 if (!process.env.DISCORD_BOT_TOKEN) {
@@ -284,6 +285,10 @@ client.on("messageCreate", async (message: Message) => {
 
       case "ck":
         embed = await handleStock(message, args, user);
+        break;
+
+      case "hcd":
+        embed = await handleVirtueVault(message, args, user);
         break;
 
       case "help":

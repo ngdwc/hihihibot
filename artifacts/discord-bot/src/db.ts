@@ -70,6 +70,10 @@ export interface DbTaixiuSession {
   total_wagered: number;
 }
 
+export interface DbVirtueVault {
+  balance: number;
+}
+
 export const TAIXIU_DEFAULT_BET = 10_000;
 
 // ─── Mongoose Schemas ─────────────────────────────────────────────────────────
@@ -199,6 +203,14 @@ const TaixiuSessionSchema = new Schema<ITaixiuSession>({
   totalWagered: { type: Number, default: 0 },
 });
 export const TaixiuSessionModel = model<ITaixiuSession>("TaixiuSession", TaixiuSessionSchema);
+
+interface IVirtueVault extends Document {
+  balance: number;
+}
+const VirtueVaultSchema = new Schema<IVirtueVault>({
+  balance: { type: Number, default: 0 },
+});
+export const VirtueVaultModel = model<IVirtueVault>("VirtueVault", VirtueVaultSchema);
 
 interface IAchievement extends Document {
   discordId: string;
@@ -379,7 +391,7 @@ export async function stopMeditation(
   const startedAt = doc.meditationStartedAt?.getTime() ?? now;
   const lastGrantAt = doc.meditationLastGrantAt?.getTime() ?? startedAt;
   const minutesMeditated = Math.floor((now - startedAt) / 60_000);
-  const pendingGrants = Math.floor((now - lastGrantAt) / (15 * 60_000));
+  const pendingGrants = Math.floor((now - lastGrantAt) / (30 * 60_000));
   const newVirtue = (doc.virtue ?? 100) + pendingGrants;
   await UserModel.updateOne(
     { discordId },
@@ -586,6 +598,29 @@ export async function saveTaixiuSession(
 export async function getRecentTaixiuSessions(limit = 5): Promise<DbTaixiuSession[]> {
   const docs = await TaixiuSessionModel.find().sort({ createdAt: -1 }).limit(limit);
   return docs.map(toDbTaixiuSession);
+}
+
+// ─── Virtue Vault ───────────────────────────────────────────────────────────
+
+export async function getVirtueVaultBalance(): Promise<number> {
+  const doc = await VirtueVaultModel.findOne();
+  return doc?.balance ?? 0;
+}
+
+export async function depositToVirtueVault(amount: number): Promise<number> {
+  const doc = await VirtueVaultModel.findOneAndUpdate(
+    {},
+    { $inc: { balance: amount } },
+    { upsert: true, new: true },
+  );
+  return doc.balance;
+}
+
+export async function withdrawFromVirtueVault(amount: number): Promise<boolean> {
+  const doc = await VirtueVaultModel.findOne();
+  if (!doc || doc.balance < amount) return false;
+  await VirtueVaultModel.updateOne({}, { $inc: { balance: -amount } });
+  return true;
 }
 
 // ─── Stock Position ───────────────────────────────────────────────────────────

@@ -12,6 +12,9 @@ export async function handleHelp(_message: Message): Promise<EmbedBuilder> {
           "`!daily` — Nhận thưởng hàng ngày (24h)",
           "`!leaderboard [money]` — Bảng xếp hạng",
           "`!transfer @user <tiền>` — Chuyển tiền",
+          "`!hcd` — Xem hòm công đức",
+          "`!hcd botien <số tiền>` — Bỏ tiền vào hòm công đức",
+          "`!hcd laytien <số tiền>` — Rút tiền từ hòm công đức",
         ].join("\n"),
       },
       {

@@ -122,7 +122,7 @@ export async function handleThien(
     .setColor("#9B59B6")
     .setTitle("🧘 Lệnh thiền")
     .setDescription(
-      "`!thien start` — Bắt đầu thiền (+1 công đức/10 phút)\n" +
+      "`!thien start` — Bắt đầu thiền (+1 công đức/30 phút)\n" +
         "`!thien stop` — Dừng thiền và nhận kết quả",
     );
 }

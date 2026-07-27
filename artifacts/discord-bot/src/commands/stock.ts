@@ -8,7 +8,7 @@ import {
 } from "../db.js";
 import { fmt } from "../utils.js";
 
-const MAX_LEVERAGE = 10;
+const MAX_LEVERAGE = 20;
 
 async function getBtcPrice(): Promise<number> {
   const res = await fetch(
