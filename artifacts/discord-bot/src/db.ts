@@ -587,3 +587,62 @@ export async function getRecentTaixiuSessions(limit = 5): Promise<DbTaixiuSessio
   const docs = await TaixiuSessionModel.find().sort({ createdAt: -1 }).limit(limit);
   return docs.map(toDbTaixiuSession);
 }
+
+// ─── Stock Position ───────────────────────────────────────────────────────────
+
+export interface DbStockPosition {
+  discord_id: string;
+  type: "long" | "short";
+  amount: number;
+  entry_price: number;
+  opened_at: Date;
+}
+
+interface IStockPosition extends Document {
+  discordId: string;
+  type: "long" | "short";
+  amount: number;
+  entryPrice: number;
+  openedAt: Date;
+}
+
+const StockPositionSchema = new Schema<IStockPosition>({
+  discordId: { type: String, required: true, unique: true },
+  type: { type: String, required: true },
+  amount: { type: Number, required: true },
+  entryPrice: { type: Number, required: true },
+  openedAt: { type: Date, default: Date.now },
+});
+const StockPositionModel = model<IStockPosition>("StockPosition", StockPositionSchema);
+
+function toDbStock(doc: IStockPosition): DbStockPosition {
+  return {
+    discord_id: doc.discordId,
+    type: doc.type,
+    amount: doc.amount,
+    entry_price: doc.entryPrice,
+    opened_at: doc.openedAt,
+  };
+}
+
+export async function getStockPosition(discordId: string): Promise<DbStockPosition | null> {
+  const doc = await StockPositionModel.findOne({ discordId });
+  return doc ? toDbStock(doc) : null;
+}
+
+export async function openStockPosition(
+  discordId: string,
+  type: "long" | "short",
+  amount: number,
+  entryPrice: number,
+): Promise<boolean> {
+  const existing = await StockPositionModel.findOne({ discordId });
+  if (existing) return false;
+  await StockPositionModel.create({ discordId, type, amount, entryPrice });
+  return true;
+}
+
+export async function closeStockPosition(discordId: string): Promise<DbStockPosition | null> {
+  const doc = await StockPositionModel.findOneAndDelete({ discordId });
+  return doc ? toDbStock(doc) : null;
+}

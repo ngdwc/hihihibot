@@ -42,6 +42,7 @@ import {
   handleMuaDat,
 } from "./commands/garden.js";
 import { handleTaixiu } from "./commands/taixiu.js";
+import { handleStock } from "./commands/stock.js";
 import { containsBadWord } from "./badwords.js";
 
 if (!process.env.DISCORD_BOT_TOKEN) {
@@ -279,6 +280,10 @@ client.on("messageCreate", async (message: Message) => {
 
       case "thien":
         embed = await handleThien(message, args, user);
+        break;
+
+      case "ck":
+        embed = await handleStock(message, args, user);
         break;
 
       case "help":
