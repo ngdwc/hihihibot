@@ -28,7 +28,8 @@ export async function handleHelp(_message: Message): Promise<EmbedBuilder> {
           "`!mine` — Đào quặng (10 phút cooldown)",
           "`!inventory` — Xem túi đồ",
           "`$sell ore <tên> <số lượng>` — Bán quặng",
-          "`$sell ore diamond 10` — VD: bán 10 kim cương",
+          "`$sell fish <id> <số lượng>` — Bán cá (VD: `$sell fish ca_hoi 3`)",
+          "`$sell plant <id> <số lượng>` — Bán nông sản (VD: `$sell plant carrot 5`)",
         ].join("\n"),
       },
       {
@@ -38,7 +39,7 @@ export async function handleHelp(_message: Message): Promise<EmbedBuilder> {
           "`!plant <ô>` — Xem thời gian chín & giá bán của 1 ô",
           "`!trongcay <ô> <tên cây>` — Trồng hạt giống (mua ở `!shop`)",
           "`!thu <ô|all>` — Thu hoạch 1 ô hoặc tất cả ô đã chín",
-          "`!muadat` — Mua thêm 1 ô đất (100.000.000 ₫, tối đa 64 ô)",
+          "`!muadat` — Mua thêm 1 ô đất",
         ].join("\n"),
       },
       {

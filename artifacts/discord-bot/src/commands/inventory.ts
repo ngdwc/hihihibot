@@ -1,50 +1,138 @@
-import { EmbedBuilder, Message } from 'discord.js';
-import { DbUser, getInventory, DbInventoryItem } from '../db.js';
-import { SHOP_ITEMS } from './shop.js';
-import { fmt } from '../utils.js';
+import { EmbedBuilder, Message } from "discord.js";
+import { DbUser, getInventory, DbInventoryItem } from "../db.js";
+import { SHOP_ITEMS } from "./shop.js";
+import { FISH_TABLE } from "./fish.js";
+import { PLANT_TYPES } from "./garden.js";
+import { fmt } from "../utils.js";
 
-const ORE_DISPLAY: Record<string, { emoji: string; name: string; price: number }> = {
-  stone:   { emoji: '🪨', name: 'Đá',        price: 100 },
-  copper:  { emoji: '🟤', name: 'Đồng',      price: 500 },
-  iron:    { emoji: '⚙️',  name: 'Sắt',       price: 1_500 },
-  gold:    { emoji: '🟡', name: 'Vàng',      price: 8_000 },
-  diamond: { emoji: '💎', name: 'Kim cương', price: 50_000 },
-  emerald: { emoji: '💚', name: 'Ngọc bích', price: 200_000 },
+const ORE_DISPLAY: Record<
+  string,
+  { emoji: string; name: string; price: number }
+> = {
+  stone: { emoji: "🪨", name: "Đá", price: 100 },
+  copper: { emoji: "🟤", name: "Đồng", price: 500 },
+  iron: { emoji: "⚙️", name: "Sắt", price: 1_500 },
+  gold: { emoji: "🟡", name: "Vàng", price: 8_000 },
+  diamond: { emoji: "💎", name: "Kim cương", price: 50_000 },
+  emerald: { emoji: "💚", name: "Ngọc bích", price: 200_000 },
 };
 
-export async function handleInventory(message: Message, user: DbUser): Promise<EmbedBuilder> {
-  const items = await getInventory(user.discord_id);
+/** Ước lượng giá trung bình (weight trung bình = 1.5×baseWeight) để hiển thị tham khảo trong túi đồ. */
+function estimatedAvgFishPrice(basePrice: number, baseWeight: number): number {
+  return Math.round(basePrice * baseWeight * 1.5);
+}
+function estimatedAvgPlantPrice(sellPrice: number, baseWeight: number): number {
+  const pricePerKg = sellPrice / baseWeight;
+  return Math.round(pricePerKg * baseWeight * 1.5);
+}
 
-  const ores = items.filter((i: DbInventoryItem) => i.category === 'ore');
-  const shopItems = items.filter((i: DbInventoryItem) => i.category === 'item');
+export async function handleInventory(
+  message: Message,
+  user: DbUser,
+): Promise<EmbedBuilder> {
+  const items = await getInventory(user.discord_id);
+  const ores = items.filter((i: DbInventoryItem) => i.category === "ore");
+  const fishes = items.filter((i: DbInventoryItem) => i.category === "fish");
+  const plants = items.filter((i: DbInventoryItem) => i.category === "plant");
+  const shopItems = items.filter((i: DbInventoryItem) => i.category === "item");
+  const seeds = items.filter((i: DbInventoryItem) => i.category === "seed");
 
   const embed = new EmbedBuilder()
-    .setColor('#8B4513')
+    .setColor("#8B4513")
     .setTitle(`🎒 Túi đồ — ${user.username}`)
     .setTimestamp();
 
-  if (ores.length === 0 && shopItems.length === 0) {
-    embed.setDescription('Túi đồ trống. Hãy đi `!mine` hoặc `!shop` nào!');
+  if (
+    ores.length === 0 &&
+    fishes.length === 0 &&
+    plants.length === 0 &&
+    shopItems.length === 0 &&
+    seeds.length === 0
+  ) {
+    embed.setDescription(
+      "Túi đồ trống. Hãy đi `!mine`, `!fish`, `!vuon` hoặc `!shop` nào!",
+    );
     return embed;
   }
 
   if (ores.length > 0) {
     const oreLines = ores.map((o: DbInventoryItem) => {
-      const info = ORE_DISPLAY[o.item_name] ?? { emoji: '❓', name: o.item_name, price: 0 };
+      const info = ORE_DISPLAY[o.item_name] ?? {
+        emoji: "❓",
+        name: o.item_name,
+        price: 0,
+      };
       const total = info.price * o.quantity;
-      return `${info.emoji} **${info.name}** ×${o.quantity} — Giá: ${fmt(info.price)}/cái (tổng ~${fmt(total)})`;
+      return `${info.emoji} **${info.name}** \`${o.item_name}\` ×${o.quantity} — ~${fmt(total)} (\`$sell ore ${o.item_name} ${o.quantity}\`)`;
     });
-    embed.addFields({ name: '⛏️ Quặng', value: oreLines.join('\n'), inline: false });
+    embed.addFields({
+      name: "⛏️ Quặng",
+      value: oreLines.join("\n"),
+      inline: false,
+    });
+  }
+
+  if (fishes.length > 0) {
+    const fishLines = fishes.map((f: DbInventoryItem) => {
+      const info = FISH_TABLE.find((ft) => ft.id === f.item_name);
+      if (!info) return `❓ ${f.item_name} ×${f.quantity}`;
+      const total =
+        estimatedAvgFishPrice(info.basePrice, info.baseWeight) * f.quantity;
+      return `${info.emoji} **${info.name}** \`${info.id}\` ×${f.quantity} — ~${fmt(total)} (\`$sell fish ${info.id} ${f.quantity}\`)`;
+    });
+    embed.addFields({
+      name: "🎣 Cá",
+      value: fishLines.join("\n"),
+      inline: false,
+    });
+  }
+
+  if (plants.length > 0) {
+    const plantLines = plants.map((p: DbInventoryItem) => {
+      const info = PLANT_TYPES.find((pt) => pt.id === p.item_name);
+      if (!info) return `❓ ${p.item_name} ×${p.quantity}`;
+      const total =
+        estimatedAvgPlantPrice(info.sellPrice, info.baseWeight) * p.quantity;
+      return `${info.emoji} **${info.name}** \`${info.id}\` ×${p.quantity} — ~${fmt(total)} (\`$sell plant ${info.id} ${p.quantity}\`)`;
+    });
+    embed.addFields({
+      name: "🌾 Nông sản",
+      value: plantLines.join("\n"),
+      inline: false,
+    });
+  }
+
+  if (seeds.length > 0) {
+    const seedLines = seeds.map((s: DbInventoryItem) => {
+      const plantId = s.item_name.replace(/^seed_/, "");
+      const info = PLANT_TYPES.find((pt) => pt.id === plantId);
+      return info
+        ? `${info.emoji} **Hạt giống ${info.name}** ×${s.quantity}`
+        : `❓ ${s.item_name} ×${s.quantity}`;
+    });
+    embed.addFields({
+      name: "🌱 Hạt giống",
+      value: seedLines.join("\n"),
+      inline: false,
+    });
   }
 
   if (shopItems.length > 0) {
     const itemLines = shopItems.map((s: DbInventoryItem) => {
-      const info = SHOP_ITEMS.find(si => si.id === s.item_name);
-      return info ? `${info.emoji} **${info.name}** ×${s.quantity}` : `❓ ${s.item_name} ×${s.quantity}`;
+      const info = SHOP_ITEMS.find((si) => si.id === s.item_name);
+      return info
+        ? `${info.emoji} **${info.name}** ×${s.quantity}`
+        : `❓ ${s.item_name} ×${s.quantity}`;
     });
-    embed.addFields({ name: '🛍️ Vật phẩm', value: itemLines.join('\n'), inline: false });
+    embed.addFields({
+      name: "🛍️ Vật phẩm",
+      value: itemLines.join("\n"),
+      inline: false,
+    });
   }
 
-  embed.setFooter({ text: 'Dùng $sell ore <tên> <số lượng> để bán quặng' });
+  embed.setFooter({
+    text: "Giá cá/nông sản là ước lượng — thực tế random theo cân nặng lúc bán",
+  });
   return embed;
 }
