@@ -1,0 +1,2 @@
+- [MongoDB SSL fix](mongodb-ssl-fix.md) — Replit cần `tlsAllowInvalidCertificates: true` khi kết nối MongoDB Atlas
+- [Discord bot features](discord-bot-features.md) — Toàn bộ tính năng bot RPG kinh tế tiếng Việt

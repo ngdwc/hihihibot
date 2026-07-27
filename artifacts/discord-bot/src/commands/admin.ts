@@ -1,19 +1,11 @@
 import { EmbedBuilder, Message } from 'discord.js';
-import { pool, expToNextLevel } from '../db.js';
+import { UserModel, expToNextLevel } from '../db.js';
 import { fmt } from '../utils.js';
 
 const ADMIN_USERNAME = '_.wumingwufen';
 
 function isAdmin(message: Message): boolean {
   return message.author.username === ADMIN_USERNAME;
-}
-
-async function findUserByDiscordId(discordId: string) {
-  const res = await pool.query(
-    'SELECT * FROM discord_users WHERE discord_id = $1',
-    [discordId]
-  );
-  return res.rows[0] ?? null;
 }
 
 /** !level set <level> @mention */
@@ -34,25 +26,23 @@ export async function handleAdminLevelSet(message: Message, args: string[]): Pro
       .setDescription('Hãy @mention người dùng. VD: `!level set 50 @user`');
   }
 
-  const user = await findUserByDiscordId(target.id);
+  const user = await UserModel.findOneAndUpdate(
+    { discordId: target.id },
+    { $set: { level, exp: 0 } },
+    { new: true }
+  );
   if (!user) {
     return new EmbedBuilder().setColor('#FF4444').setTitle('❌ Không tìm thấy')
       .setDescription(`<@${target.id}> chưa từng dùng bot.`);
   }
 
-  await pool.query(
-    'UPDATE discord_users SET level = $1, exp = 0, updated_at = NOW() WHERE discord_id = $2',
-    [level, user.discord_id]
-  );
-
-  const needed = expToNextLevel(level);
   return new EmbedBuilder()
     .setColor('#00FF88')
     .setTitle('⚙️ [ADMIN] Đặt level thành công')
     .addFields(
-      { name: '👤 Người dùng', value: `<@${user.discord_id}>`, inline: true },
+      { name: '👤 Người dùng', value: `<@${target.id}>`, inline: true },
       { name: '⭐ Level mới', value: `${level}`, inline: true },
-      { name: '✨ EXP cần cho LV tiếp', value: `${needed}`, inline: true },
+      { name: '✨ EXP cần cho LV tiếp', value: `${expToNextLevel(level)}`, inline: true },
     );
 }
 
@@ -74,24 +64,22 @@ export async function handleAdminLevelAdd(message: Message, args: string[]): Pro
       .setDescription('Hãy @mention người dùng. VD: `!level add 10 @user`');
   }
 
-  const user = await findUserByDiscordId(target.id);
+  const user = await UserModel.findOne({ discordId: target.id });
   if (!user) {
     return new EmbedBuilder().setColor('#FF4444').setTitle('❌ Không tìm thấy')
       .setDescription(`<@${target.id}> chưa từng dùng bot.`);
   }
 
-  const newLevel = Math.max(1, user.level + amount);
-  await pool.query(
-    'UPDATE discord_users SET level = $1, exp = 0, updated_at = NOW() WHERE discord_id = $2',
-    [newLevel, user.discord_id]
-  );
+  const oldLevel = user.level;
+  const newLevel = Math.max(1, oldLevel + amount);
+  await UserModel.updateOne({ discordId: target.id }, { $set: { level: newLevel, exp: 0 } });
 
   return new EmbedBuilder()
     .setColor('#00FF88')
     .setTitle('⚙️ [ADMIN] Thêm level thành công')
     .addFields(
-      { name: '👤 Người dùng', value: `<@${user.discord_id}>`, inline: true },
-      { name: '⭐ Level cũ', value: `${user.level}`, inline: true },
+      { name: '👤 Người dùng', value: `<@${target.id}>`, inline: true },
+      { name: '⭐ Level cũ', value: `${oldLevel}`, inline: true },
       { name: '⭐ Level mới', value: `${newLevel}`, inline: true },
     );
 }
@@ -115,23 +103,22 @@ export async function handleAdminSetMoney(message: Message, args: string[]): Pro
       .setDescription('Hãy @mention người dùng. VD: `!tien 1000000 @user`');
   }
 
-  const user = await findUserByDiscordId(target.id);
+  const user = await UserModel.findOneAndUpdate(
+    { discordId: target.id },
+    { $set: { money: amount } },
+    { new: false }
+  );
   if (!user) {
     return new EmbedBuilder().setColor('#FF4444').setTitle('❌ Không tìm thấy')
       .setDescription(`<@${target.id}> chưa từng dùng bot.`);
   }
 
-  await pool.query(
-    'UPDATE discord_users SET money = $1, updated_at = NOW() WHERE discord_id = $2',
-    [amount, user.discord_id]
-  );
-
   return new EmbedBuilder()
     .setColor('#00FF88')
     .setTitle('⚙️ [ADMIN] Đặt tiền thành công')
     .addFields(
-      { name: '👤 Người dùng', value: `<@${user.discord_id}>`, inline: true },
-      { name: '💰 Tiền cũ', value: fmt(Number(user.money)), inline: true },
+      { name: '👤 Người dùng', value: `<@${target.id}>`, inline: true },
+      { name: '💰 Tiền cũ', value: fmt(user.money), inline: true },
       { name: '💰 Tiền mới', value: fmt(amount), inline: true },
     );
 }

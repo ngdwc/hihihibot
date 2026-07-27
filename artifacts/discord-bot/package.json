@@ -9,12 +9,11 @@
   },
   "dependencies": {
     "discord.js": "^14.16.3",
-    "pg": "^8.13.3"
+    "mongoose": "^8.15.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
-    "@types/pg": "^8.11.11",
-    "tsx": "catalog:",
+    "tsx": "^4.19.2",
     "typescript": "^5.9.3"
   }
 }
