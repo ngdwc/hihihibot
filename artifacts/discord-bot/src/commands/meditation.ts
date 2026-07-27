@@ -60,7 +60,7 @@ export async function handleThien(message: Message, args: string[], user: DbUser
       .addFields(
         { name: "⏱️ Thời gian thiền",  value: `${minutesMeditated} phút`,   inline: true },
         { name: "✨ Công đức nhận được", value: `+${virtueGranted}`,           inline: true },
-        { name: "💫 Công đức hiện tại",  value: `${newVirtue}/200`,            inline: true },
+        { name: "💫 Công đức hiện tại",  value: `${newVirtue}`,            inline: true },
       );
 
     if (earnedMonk)  embed.addFields({ name: "🏆 Thành tựu mới!", value: "🧘 **Đại Thiền Sư** — Thiền đủ 60 phút!" });

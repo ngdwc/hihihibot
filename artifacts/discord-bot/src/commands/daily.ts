@@ -38,7 +38,7 @@ export async function handleDaily(message: Message, user: DbUser): Promise<Embed
     .addFields(
       { name: "💰 Tiền nhận được", value: fmt(money), inline: true },
       { name: "✨ EXP", value: `+${exp}`, inline: true },
-      { name: "💫 Công đức", value: `+1 → ${newVirtue}/200`, inline: true },
+      { name: "💫 Công đức", value: `+1 → ${newVirtue}`, inline: true },
     )
     .setFooter({ text: "Quay lại sau 24 giờ!" });
 

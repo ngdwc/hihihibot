@@ -137,7 +137,7 @@ export async function handleCrime(
         value: fmt(Number(user.money) - actualFine),
         inline: true,
       },
-      { name: "💫 Công đức", value: `-5 → ${newVirtue}/200`, inline: true },
+      { name: "💫 Công đức", value: `-5 → ${newVirtue}`, inline: true },
     )
     .setFooter({
       text: `Cooldown: 2 giờ${hasMask ? " | 🎭 Mặt nạ đang hoạt động" : ""}`,
