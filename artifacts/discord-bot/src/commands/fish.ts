@@ -115,7 +115,8 @@ export async function handleFish(message: Message, user: DbUser): Promise<EmbedB
   } else {
     // 2 cá (rod lv3)
     const lines = catches.map(
-      (f) => `${f.emoji} **${f.name}** — dùng \`$sell fish ${f.id} 1\``,
+      (f) =>
+        `${f.emoji} **${f.name}** — ⚖️ tối đa ${(f.baseWeight * 2 * (1 + weightBonus)).toFixed(1)} kg | \`$sell fish ${f.id} 1\``,
     );
     embed
       .setTitle("🎣 Câu được 2 con cá! (Cần câu LV3)")

@@ -185,14 +185,19 @@ export async function handleThu(message: Message, args: string[], user: DbUser):
     const newHarvestCount = (user.harvest_count ?? 0) + count;
     const earnedFarmer = await checkAndGrant(user.discord_id, "farmer", newHarvestCount >= 100);
 
-    const lines = Array.from(collected.values()).map(
-      ({ plant, qty }) => `${plant.emoji} **${plant.name}** \`${plant.id}\` ×${qty}`,
-    );
+    let totalWeight = 0;
+    const lines = Array.from(collected.values()).map(({ plant, qty }) => {
+      for (let i = 0; i < qty; i++) {
+        totalWeight += plant.baseWeight + Math.random() * plant.baseWeight;
+      }
+      return `${plant.emoji} **${plant.name}** \`${plant.id}\` ×${qty}`;
+    });
 
     const embed = new EmbedBuilder()
       .setColor("#FFD700")
       .setTitle("🌾 Thu hoạch hàng loạt!")
-      .setDescription(`Thu **${count}** ô vào túi đồ!\n${lines.join("\n")}\n\nDùng \`$sell plant <id> <số>\` để bán.`);
+      .setDescription(`Thu **${count}** ô vào túi đồ!\n${lines.join("\n")}\n\nDùng \`$sell plant <id> <số>\` để bán.`)
+      .addFields({ name: "⚖️ Tổng cân nặng", value: `${totalWeight.toFixed(2)} kg`, inline: true });
 
     if (earnedFarmer) embed.addFields({ name: "🏆 Thành tựu mới!", value: "🌾 **Nông Dân Chăm Chỉ** — Thu hoạch 100 lần!" });
     return embed;
@@ -220,10 +225,13 @@ export async function handleThu(message: Message, args: string[], user: DbUser):
   const newHarvestCount = (user.harvest_count ?? 0) + 1;
   const earnedFarmer = await checkAndGrant(user.discord_id, "farmer", newHarvestCount >= 100);
 
+  const harvestWeight = plant.baseWeight + Math.random() * plant.baseWeight;
+
   const embed = new EmbedBuilder()
     .setColor("#FFD700")
     .setTitle(`${plant.emoji} Thu hoạch thành công!`)
-    .setDescription(`**${plant.name}** \`${plant.id}\` đã vào túi đồ!\nDùng \`$sell plant ${plant.id} 1\` để bán.`);
+    .setDescription(`**${plant.name}** \`${plant.id}\` đã vào túi đồ!\nDùng \`$sell plant ${plant.id} 1\` để bán.`)
+    .addFields({ name: "⚖️ Cân nặng", value: `${harvestWeight.toFixed(2)} kg`, inline: true });
 
   if (earnedFarmer) embed.addFields({ name: "🏆 Thành tựu mới!", value: "🌾 **Nông Dân Chăm Chỉ** — Thu hoạch 100 lần!" });
   return embed;

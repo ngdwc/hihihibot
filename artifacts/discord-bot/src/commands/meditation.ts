@@ -25,7 +25,7 @@ export async function handleThien(message: Message, args: string[], user: DbUser
       .setTitle("🧘 Bắt đầu thiền định...")
       .setDescription(
         "Bạn ngồi xuống, nhắm mắt và hít thở sâu...\n\n" +
-        "• Mỗi **10 phút** thiền = **+1 công đức**\n" +
+        "• Mỗi **15 phút** thiền = **+1 công đức**\n" +
         "• Dùng `!thien stop` để dừng và xem kết quả",
       )
       .setFooter({ text: "Không làm được bất cứ lệnh nào khi đang thiền!" });

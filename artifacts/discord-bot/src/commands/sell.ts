@@ -178,11 +178,6 @@ async function sellFish(
         value: `${fish.emoji} ${fish.name} ×${qty}`,
         inline: true,
       },
-      {
-        name: "⚖️ Tổng cân nặng",
-        value: `${totalWeight.toFixed(2)} kg`,
-        inline: true,
-      },
       { name: "💰 Thu được", value: fmt(total), inline: true },
       {
         name: "💳 Số dư ví",
@@ -239,11 +234,6 @@ async function sellPlant(
       {
         name: "📦 Đã bán",
         value: `${plant.emoji} ${plant.name} ×${qty}`,
-        inline: true,
-      },
-      {
-        name: "⚖️ Tổng cân nặng",
-        value: `${totalWeight.toFixed(2)} kg`,
         inline: true,
       },
       { name: "💰 Thu được", value: fmt(total), inline: true },

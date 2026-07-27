@@ -76,64 +76,89 @@ function formatGrowTime(ms: number): string {
   return `${m}p`;
 }
 
-function splitIntoFields(lines: string[], maxLength = 1024): string[] {
-  const result: string[] = [];
-  let current = "";
+const ITEMS_PER_PAGE = 5;
 
-  for (const line of lines) {
-    const next = current ? `${current}\n\n${line}` : line;
-
-    if (next.length > maxLength) {
-      if (current) result.push(current);
-      current = line;
-    } else {
-      current = next;
-    }
-  }
-
-  if (current) result.push(current);
-
-  return result;
-}
-
-export async function handleShop(_message: Message): Promise<EmbedBuilder> {
+function buildShopPages(): EmbedBuilder[] {
   const items = SHOP_ITEMS.filter((i) => i.category === "item");
   const seeds = SHOP_ITEMS.filter((i) => i.category === "seed");
+  const seedPageCount = Math.ceil(seeds.length / ITEMS_PER_PAGE);
+  const totalPages = 1 + seedPageCount;
 
+  const pages: EmbedBuilder[] = [];
+
+  // Page 1: Vật phẩm
   const itemLines = items.map(
     (item, i) =>
       `**${i + 1}.** ${item.emoji} **${item.name}** — ${fmt(item.price)}\n┗ ${item.description}`,
   );
+  pages.push(
+    new EmbedBuilder()
+      .setColor("#FF9500")
+      .setTitle("🛒 Cửa hàng")
+      .addFields({ name: "🎒 Vật phẩm", value: itemLines.join("\n\n") })
+      .setFooter({
+        text: `Trang 1/${totalPages} | ⬅️➡️ chuyển trang | !buy <số> để mua`,
+      }),
+  );
 
-  const seedLines = seeds.map((item) => {
-    const idx = SHOP_ITEMS.indexOf(item) + 1;
-
-    return `**${idx}.** ${item.emoji} **${item.name}** — ${fmt(
-      item.price,
-    )}\n┗ ${item.description}`;
-  });
-
-  const embed = new EmbedBuilder().setColor("#FF9500").setTitle("🛒 Cửa hàng");
-
-  embed.addFields({
-    name: "🎒 Vật phẩm",
-    value: itemLines.join("\n\n"),
-  });
-
-  const seedFields = splitIntoFields(seedLines);
-
-  seedFields.forEach((field, index) => {
-    embed.addFields({
-      name: index === 0 ? "🌱 Hạt giống (trồng vườn)" : "🌱 Hạt giống (tiếp)",
-      value: field,
+  // Seed pages (5 per page)
+  for (let p = 0; p < seedPageCount; p++) {
+    const slice = seeds.slice(p * ITEMS_PER_PAGE, (p + 1) * ITEMS_PER_PAGE);
+    const seedLines = slice.map((item) => {
+      const idx = SHOP_ITEMS.indexOf(item) + 1;
+      return `**${idx}.** ${item.emoji} **${item.name}** — ${fmt(item.price)}\n┗ ${item.description}`;
     });
+    pages.push(
+      new EmbedBuilder()
+        .setColor("#FF9500")
+        .setTitle("🛒 Cửa hàng")
+        .addFields({
+          name: `🌱 Hạt giống (${p + 1}/${seedPageCount})`,
+          value: seedLines.join("\n\n"),
+        })
+        .setFooter({
+          text: `Trang ${p + 2}/${totalPages} | ⬅️➡️ chuyển trang | !buy <số> để mua | !trongcay <ô> <id>`,
+        }),
+    );
+  }
+
+  return pages;
+}
+
+export async function handleShop(message: Message): Promise<EmbedBuilder | null> {
+  const pages = buildShopPages();
+
+  const sent = await message.reply({ embeds: [pages[0]!] });
+
+  if (pages.length <= 1) return null;
+
+  await sent.react("⬅️");
+  await sent.react("➡️");
+
+  let currentPage = 0;
+
+  const collector = sent.createReactionCollector({
+    filter: (reaction, user) =>
+      ["⬅️", "➡️"].includes(reaction.emoji.name ?? "") &&
+      user.id === message.author.id,
+    time: 60_000,
   });
 
-  embed.setFooter({
-    text: "Dùng !buy <số thứ tự> để mua. VD: !buy 1",
+  collector.on("collect", async (reaction, user) => {
+    if (reaction.emoji.name === "➡️") {
+      currentPage = Math.min(currentPage + 1, pages.length - 1);
+    } else {
+      currentPage = Math.max(currentPage - 1, 0);
+    }
+    await sent.edit({ embeds: [pages[currentPage]!] });
+    await reaction.users.remove(user.id).catch(() => {});
   });
 
-  return embed;
+  collector.on("end", async () => {
+    await sent.reactions.removeAll().catch(() => {});
+  });
+
+  return null;
 }
 
 export async function handleBuy(

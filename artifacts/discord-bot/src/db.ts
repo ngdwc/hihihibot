@@ -379,7 +379,7 @@ export async function stopMeditation(
   const startedAt = doc.meditationStartedAt?.getTime() ?? now;
   const lastGrantAt = doc.meditationLastGrantAt?.getTime() ?? startedAt;
   const minutesMeditated = Math.floor((now - startedAt) / 60_000);
-  const pendingGrants = Math.floor((now - lastGrantAt) / (10 * 60_000));
+  const pendingGrants = Math.floor((now - lastGrantAt) / (15 * 60_000));
   const newVirtue = (doc.virtue ?? 100) + pendingGrants;
   await UserModel.updateOne(
     { discordId },
