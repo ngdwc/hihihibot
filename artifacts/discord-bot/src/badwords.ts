@@ -1,7 +1,7 @@
 /**
  * Danh sách từ tục tĩu — chỉnh sửa thoải mái tại đây.
  * Mỗi lần bot phát hiện từ trong danh sách này trong chat:
- *  • Người chơi -3 công đức
+ *  • Người chơi -1 công đức
  *  • +1 profanityCount (hướng tới thành tựu "Mỏ Hỗn")
  */
 export const BADWORDS: string[] = [

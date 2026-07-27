@@ -51,6 +51,14 @@ export async function handleHelp(_message: Message): Promise<EmbedBuilder> {
         ].join("\n"),
       },
       {
+        name: "🧘 Thiền",
+        value: [
+          "`!thien start` — Bắt đầu thiền",
+          "`!thien stop` — Dừng thiền và nhận công đức",
+          "Mỗi 10 phút thiền = +1 công đức",
+        ].join("\n"),
+      },
+      {
         name: "🎣 Câu cá",
         value: "`!fish` — Câu cá (30 phút cooldown)",
       },

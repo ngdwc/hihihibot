@@ -2,15 +2,12 @@ import { EmbedBuilder, Message } from "discord.js";
 import { DbUser, startMeditation, stopMeditation, checkAndGrant } from "../db.js";
 import { fmtTime } from "../utils.js";
 
-// Set ID người đang thiền — được quản lý bởi index.ts
-// Export để index.ts có thể update
-export const meditatingUsers = new Set<string>();
-
 export async function handleThien(message: Message, args: string[], user: DbUser): Promise<EmbedBuilder> {
   const sub = args[0]?.toLowerCase();
+  const isMeditating = user.meditating ?? false;
 
   if (sub === "start" || sub === "bat_dau") {
-    if (meditatingUsers.has(user.discord_id)) {
+    if (isMeditating) {
       return new EmbedBuilder()
         .setColor("#FF4444").setTitle("🧘 Đang thiền rồi!")
         .setDescription("Bạn đang trong trạng thái thiền. Dùng `!thien stop` để dừng.");
@@ -23,29 +20,25 @@ export async function handleThien(message: Message, args: string[], user: DbUser
         .setDescription("Dùng `!thien stop` để dừng thiền trước.");
     }
 
-    meditatingUsers.add(user.discord_id);
-
     return new EmbedBuilder()
       .setColor("#9B59B6")
       .setTitle("🧘 Bắt đầu thiền định...")
       .setDescription(
         "Bạn ngồi xuống, nhắm mắt và hít thở sâu...\n\n" +
         "• Mỗi **10 phút** thiền = **+1 công đức**\n" +
-        "• Gửi bất kỳ tin nhắn nào sẽ **dừng thiền**\n" +
         "• Dùng `!thien stop` để dừng và xem kết quả",
       )
       .setFooter({ text: "Không làm được bất cứ lệnh nào khi đang thiền!" });
   }
 
   if (sub === "stop" || sub === "dung") {
-    if (!meditatingUsers.has(user.discord_id)) {
+    if (!isMeditating) {
       return new EmbedBuilder()
         .setColor("#FF4444").setTitle("❌ Chưa thiền")
         .setDescription("Bạn chưa bắt đầu thiền. Dùng `!thien start`.");
     }
 
     const result = await stopMeditation(user.discord_id);
-    meditatingUsers.delete(user.discord_id);
 
     if (!result) {
       return new EmbedBuilder().setColor("#888888").setTitle("🧘 Đã dừng thiền.");

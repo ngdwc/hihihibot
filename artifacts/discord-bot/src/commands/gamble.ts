@@ -1,5 +1,5 @@
 import { EmbedBuilder, Message } from 'discord.js';
-import { DbUser, updateMoney, hasItem } from '../db.js';
+import { DbUser, updateMoney, hasItem, getVirtueLuckBonus } from '../db.js';
 import { fmt } from '../utils.js';
 
 const MIN_BET = 1_000;
@@ -18,7 +18,8 @@ export async function handleGamble(message: Message, args: string[], user: DbUse
   }
 
   const hasLucky = await hasItem(user.discord_id, 'item', 'lucky_charm');
-  const winChance = hasLucky ? 0.55 : 0.50;
+  const virtueLuck = getVirtueLuckBonus(user.virtue ?? 100);
+  const winChance = hasLucky ? 0.55 + virtueLuck : 0.50 + virtueLuck;
 
   // Slot machine symbols
   const symbols = ['🍒', '🍋', '🍊', '🍇', '🔔', '⭐', '💎'];
@@ -65,7 +66,11 @@ export async function handleGamble(message: Message, args: string[], user: DbUse
       );
   }
 
-  if (hasLucky) embed.setFooter({ text: '🍀 Bùa may mắn đang hoạt động (+5% thắng)' });
+  if (hasLucky) {
+    embed.setFooter({ text: '🍀 Bùa may mắn đang hoạt động (+5% thắng)' });
+  } else {
+    embed.setFooter({ text: `🍀 Luck công đức: ${virtueLuck >= 0 ? '+' : ''}${(virtueLuck * 100).toFixed(1)}%` });
+  }
   return embed;
 }
 
@@ -90,15 +95,17 @@ export async function handleCoinflip(message: Message, args: string[], user: DbU
       .setDescription(`Bạn chỉ có **${fmt(Number(user.money))}** trong ví.`);
   }
 
+  const virtueLuck = getVirtueLuckBonus(user.virtue ?? 100);
   const result = Math.random() < 0.5 ? 'heads' : 'tails';
-  const win = choice === result;
+  const luckyWin = Math.random() < Math.max(0, virtueLuck);
+  const win = choice === result || luckyWin;
   const delta = win ? amount : -amount;
   await updateMoney(user.discord_id, delta);
 
   const emoji = result === 'heads' ? '🟡 Mặt' : '⚪ Ngửa';
   const newBalance = Number(user.money) + delta;
 
-  return new EmbedBuilder()
+  const embed = new EmbedBuilder()
     .setColor(win ? '#00FF88' : '#FF4444')
     .setTitle(`🪙 Tung đồng xu — ${win ? 'THẮNG!' : 'THUA!'}`)
     .addFields(
@@ -106,4 +113,7 @@ export async function handleCoinflip(message: Message, args: string[], user: DbU
       { name: '💰 Thay đổi', value: (win ? '+' : '') + fmt(delta), inline: true },
       { name: '💳 Số dư', value: fmt(newBalance), inline: true },
     );
+
+  embed.setFooter({ text: `🍀 Luck công đức: ${virtueLuck >= 0 ? '+' : ''}${(virtueLuck * 100).toFixed(1)}%` });
+  return embed;
 }

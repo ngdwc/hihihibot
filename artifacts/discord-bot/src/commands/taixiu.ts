@@ -1,4 +1,4 @@
-import { EmbedBuilder, Message, ReactionCollector } from "discord.js";
+import { EmbedBuilder, Message, ReactionCollector, MessageReaction, User } from "discord.js";
 import {
   DbUser,
   getOrCreateUser,
@@ -124,6 +124,10 @@ async function handleTaixiuNew(message: Message): Promise<EmbedBuilder | null> {
   const revealed: (number | null)[] = [null, null, null];
   const startedAt = Date.now();
 
+  if (!message.channel || !("send" in message.channel)) {
+    return errorEmbed("❌ Lỗi", "Kênh không hỗ trợ tin nhắn.");
+  }
+
   const gameMessage = await message.channel.send({
     embeds: [
       buildLiveEmbed(Math.ceil(SESSION_DURATION_MS / 1000), 0, revealed),
@@ -147,7 +151,7 @@ async function handleTaixiuNew(message: Message): Promise<EmbedBuilder | null> {
   }, 1000);
 
   const collector = gameMessage.createReactionCollector({
-    filter: (reaction) =>
+    filter: (reaction: MessageReaction) =>
       reaction.emoji.name === EMOJI_TAI || reaction.emoji.name === EMOJI_XIU,
     time: SESSION_DURATION_MS,
     dispose: true,
@@ -155,7 +159,7 @@ async function handleTaixiuNew(message: Message): Promise<EmbedBuilder | null> {
 
   activeSession = { message: gameMessage, bets, collector };
 
-  collector.on("collect", async (reaction, reactUser) => {
+  collector.on("collect", async (reaction: MessageReaction, reactUser: User) => {
     try {
       if (reactUser.bot) return;
       const side: Side = reaction.emoji.name === EMOJI_TAI ? "tai" : "xiu";
@@ -181,7 +185,7 @@ async function handleTaixiuNew(message: Message): Promise<EmbedBuilder | null> {
     }
   });
 
-  collector.on("remove", async (reaction, reactUser) => {
+  collector.on("remove", async (reaction: MessageReaction, reactUser: User) => {
     try {
       if (reactUser.bot) return;
       const bet = bets.get(reactUser.id);

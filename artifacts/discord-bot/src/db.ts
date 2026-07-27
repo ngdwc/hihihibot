@@ -298,12 +298,12 @@ export function expToNextLevel(level: number): number {
 
 // ─── Virtue helpers ───────────────────────────────────────────────────────────
 
-/** Delta ±, clamps result to [0, 200]. Returns new virtue value. */
+/** Delta ±, no upper limit. Returns new virtue value. */
 export async function updateVirtue(discordId: string, delta: number): Promise<number> {
   const doc = await UserModel.findOne({ discordId });
   if (!doc) return 100;
   const current = doc.virtue ?? 100;
-  const newV = Math.max(0, Math.min(200, current + delta));
+  const newV = current + delta;
   await UserModel.updateOne({ discordId }, { $set: { virtue: newV } });
   return newV;
 }
@@ -380,7 +380,7 @@ export async function stopMeditation(
   const lastGrantAt = doc.meditationLastGrantAt?.getTime() ?? startedAt;
   const minutesMeditated = Math.floor((now - startedAt) / 60_000);
   const pendingGrants = Math.floor((now - lastGrantAt) / (10 * 60_000));
-  const newVirtue = Math.max(0, Math.min(200, (doc.virtue ?? 100) + pendingGrants));
+  const newVirtue = (doc.virtue ?? 100) + pendingGrants;
   await UserModel.updateOne(
     { discordId },
     {
@@ -410,7 +410,7 @@ export async function getMeditatingUsers(): Promise<
 export async function grantMeditationVirtue(discordId: string, grants: number): Promise<number> {
   const doc = await UserModel.findOne({ discordId });
   if (!doc) return 0;
-  const newVirtue = Math.max(0, Math.min(200, (doc.virtue ?? 100) + grants));
+  const newVirtue = (doc.virtue ?? 100) + grants;
   await UserModel.updateOne(
     { discordId },
     { $set: { virtue: newVirtue, meditationLastGrantAt: new Date() } },

@@ -11,6 +11,8 @@ import {
   addExp,
   checkCooldown,
   setCooldown,
+  updateVirtue,
+  incrementStat,
   DbUser,
 } from "./db.js";
 import { handleProfile } from "./commands/profile.js";
@@ -26,6 +28,7 @@ import { handleBank } from "./commands/bank.js";
 import { handleMine } from "./commands/mine.js";
 import { handleSell } from "./commands/sell.js";
 import { handleHelp } from "./commands/help.js";
+import { handleThien } from "./commands/meditation.js";
 import {
   handleAdminLevelSet,
   handleAdminLevelAdd,
@@ -39,6 +42,7 @@ import {
   handleMuaDat,
 } from "./commands/garden.js";
 import { handleTaixiu } from "./commands/taixiu.js";
+import { containsBadWord } from "./badwords.js";
 
 if (!process.env.DISCORD_BOT_TOKEN) {
   throw new Error("DISCORD_BOT_TOKEN must be set");
@@ -71,6 +75,43 @@ client.on("messageCreate", async (message: Message) => {
   const username = message.author.username;
   const content = message.content.trim();
 
+  const user = await getOrCreateUser(authorId, username);
+  const commandName = content.startsWith(PREFIX)
+    ? content.slice(PREFIX.length).trim().split(/\s+/)[0]?.toLowerCase()
+    : null;
+  const isThienCommand = commandName === "thien";
+
+  if (user.meditating && !isThienCommand) {
+    await message.reply({
+      embeds: [
+        new EmbedBuilder()
+          .setColor("#FF4444")
+          .setTitle("🧘 Đang thiền")
+          .setDescription(
+            "Bạn đang thiền và không thể dùng lệnh khác.\n" +
+              "Dùng `!thien stop` để dừng thiền.",
+          ),
+      ],
+    });
+    return;
+  }
+
+  if (containsBadWord(content)) {
+    const newVirtue = await updateVirtue(authorId, -1);
+    await incrementStat(authorId, "profanityCount", 1);
+    await message.reply({
+      embeds: [
+        new EmbedBuilder()
+          .setColor("#FF4444")
+          .setTitle("❌ Không dùng lời tục")
+          .setDescription(
+            `Bạn vừa mất **1 công đức**.\nCông đức hiện tại: **${newVirtue}**`,
+          ),
+      ],
+    });
+    return;
+  }
+
   // ── Auto EXP from chat ───────────────────────────────────────────────────
   if (!content.startsWith(PREFIX) && !content.startsWith(SELL_PREFIX)) {
     const remaining = await checkCooldown(
@@ -79,11 +120,11 @@ client.on("messageCreate", async (message: Message) => {
       CHAT_EXP_COOLDOWN,
     );
     if (remaining === null) {
-      await getOrCreateUser(authorId, username);
       const exp = Math.floor(Math.random() * 5) + 1;
       const { leveled, newLevel } = await addExp(authorId, exp);
       await setCooldown(authorId, "chat_exp");
       if (leveled) {
+        if (!message.channel || !("send" in message.channel)) return;
         await message.channel.send({
           embeds: [
             new EmbedBuilder()
@@ -132,9 +173,6 @@ client.on("messageCreate", async (message: Message) => {
   let embed: EmbedBuilder | null = null;
 
   try {
-    // Fetch/create user for commands that need it
-    const user: DbUser = await getOrCreateUser(authorId, username);
-
     switch (command) {
       case "profile":
       case "p":
@@ -237,6 +275,10 @@ client.on("messageCreate", async (message: Message) => {
       case "taixiu":
       case "tx":
         embed = await handleTaixiu(message, args, user);
+        break;
+
+      case "thien":
+        embed = await handleThien(message, args, user);
         break;
 
       case "help":
