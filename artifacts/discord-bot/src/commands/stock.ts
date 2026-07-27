@@ -198,13 +198,15 @@ export async function handleStock(
 
     let btcPrice: number;
     try {
-      btcPrice = await getBtcPrice();
-    } catch {
-      return new EmbedBuilder()
-        .setColor("#FF4444")
-        .setTitle("❌ Lỗi API")
-        .setDescription("Không lấy được giá BTC. Thử lại sau.");
-    }
+  btcPrice = await getBtcPrice();
+} catch (err) {
+  console.error("CoinGecko error:", err);
+
+  return new EmbedBuilder()
+    .setColor("#FF4444")
+    .setTitle("❌ Lỗi API")
+    .setDescription(`\`\`\`${String(err)}\`\`\``);
+}
 
     const type = sub === "mua" ? "long" : "short";
     await updateMoney(user.discord_id, -amount);
