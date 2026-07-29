@@ -125,6 +125,15 @@ export async function handleMine(
     if (entry) entry.count++;
     else drops.set(ore.name, { ore, count: 1 });
     await addInventoryItem(user.discord_id, "ore", ore.name, 1);
+
+    if (Math.random() < 0.7) {
+      const extraPoop = randInt(1, 3);
+      const poopOre = ORES.find((o) => o.name === "poop")!;
+      const poopEntry = drops.get("poop");
+      if (poopEntry) poopEntry.count += extraPoop;
+      else drops.set("poop", { ore: poopOre, count: extraPoop });
+      await addInventoryItem(user.discord_id, "ore", "poop", extraPoop);
+    }
   }
 
   await addExp(user.discord_id, exp);
