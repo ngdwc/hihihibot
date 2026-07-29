@@ -9,7 +9,7 @@ const ORE_DISPLAY: Record<
   string,
   { emoji: string; name: string; price: number }
 > = {
-  poop: { emoji: "💩", name: "drop phụ", price: 10 },
+  poop: { emoji: "💩", name: "Cứt", price: 10 },
   stone: { emoji: "🪨", name: "Đá", price: 100 },
   copper: { emoji: "🟤", name: "Đồng", price: 500 },
   iron: { emoji: "⚙️", name: "Sắt", price: 1_500 },
