@@ -50,6 +50,15 @@ export const SHOP_ITEMS: ShopItem[] = [
     unique: true,
     category: "item",
   },
+  {
+    id: "poop",
+    emoji: "💩",
+    name: "drop phụ",
+    description: "Vật phẩm dùng làm phân bón trong vườn (bón để rút ngắn thời gian chín)",
+    price: 10,
+    unique: false,
+    category: "item",
+  },
 
   ...PLANT_TYPES.map(
     (plant): ShopItem => ({
