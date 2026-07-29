@@ -13,7 +13,7 @@ export const BADWORDS: string[] = [
   "cặc",
   "lồn",
   "buồi",
-  "cứt",
+  "drop phụ",
   "chó má",
   "đcm",
   "đkm",

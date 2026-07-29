@@ -494,7 +494,7 @@ export async function handleThu(
 }
 
 // ── !bonphan <ô> <số lượng> ──────────────────────────────────────────────────
-const FERTILIZE_REDUCTION_MS = 5 * 60_000; // 5 phút mỗi cứt
+const FERTILIZE_REDUCTION_MS = 5 * 60_000; // 5 phút mỗi drop phụ
 
 export async function handleBonPhan(
   message: Message,
@@ -507,7 +507,7 @@ export async function handleBonPhan(
   if (!plotNum || plotNum < 1 || plotNum > GARDEN_MAX_PLOTS || !qty || qty < 1 || !Number.isInteger(qty)) {
     return errEmbed(
       "❌ Sai cú pháp",
-      `Dùng: \`!bonphan <ô> <số lượng cứt>\`\nVD: \`!bonphan 1 3\` — bón 3 cứt vào ô 1, giảm **15 phút** thời gian chín.`,
+      `Dùng: \`!bonphan <ô> <số lượng drop phụ>\`\nVD: \`!bonphan 1 3\` — bón 3 drop phụ vào ô 1, giảm **15 phút** thời gian chín.`,
     );
   }
 
@@ -530,12 +530,12 @@ export async function handleBonPhan(
     return errEmbed("✨ Đã chín rồi", `Ô **${plotNum}** đã chín rồi! Dùng \`!thu ${plotNum}\` để thu hoạch.`);
   }
 
-  // Kiểm tra số cứt trong kho
+  // Kiểm tra số drop phụ trong kho
   const poopOwned = await getItemQuantity(user.discord_id, "ore", "poop");
   if (poopOwned < qty) {
     return errEmbed(
-      "❌ Không đủ cứt",
-      `Bạn chỉ có **${poopOwned} cứt** trong kho. Đào thêm bằng \`!mine\`.`,
+      "❌ Không đủ drop phụ",
+      `Bạn chỉ có **${poopOwned} drop phụ** trong kho. Đào thêm bằng \`!mine\`.`,
     );
   }
 
@@ -546,7 +546,7 @@ export async function handleBonPhan(
   const actualReductionMs = Math.min(requestedReductionMs, maxReductionMs);
   const actualQtyUsed = Math.ceil(actualReductionMs / FERTILIZE_REDUCTION_MS);
 
-  // Trừ cứt và bón
+  // Trừ drop phụ và bón
   await Promise.all([
     removeInventoryItem(user.discord_id, "ore", "poop", actualQtyUsed),
     fertilizePlot(user.discord_id, idx, actualReductionMs),
@@ -559,7 +559,7 @@ export async function handleBonPhan(
     .setColor("#8B4513")
     .setTitle(`💩 Bón phân thành công!`)
     .setDescription(
-      `Đã dùng **${actualQtyUsed} cứt** bón cho ô **${plotNum}** (${plant.emoji} ${plant.name}).`,
+      `Đã dùng **${actualQtyUsed} drop phụ** bón cho ô **${plotNum}** (${plant.emoji} ${plant.name}).`,
     )
     .addFields(
       {
@@ -577,7 +577,7 @@ export async function handleBonPhan(
   if (actualQtyUsed < qty) {
     embed.addFields({
       name: "ℹ️ Lưu ý",
-      value: `Chỉ dùng **${actualQtyUsed}** cứt (cây đã chín sớm hơn dự kiến).`,
+      value: `Chỉ dùng **${actualQtyUsed}** drop phụ (cây đã chín sớm hơn dự kiến).`,
     });
   }
 

@@ -27,7 +27,7 @@ export const ORES: OreType[] = [
   {
     name: "poop",
     emoji: "💩",
-    displayName: "Cứt",
+    displayName: "drop phụ",
     chance: 70,
     price: 10,
     baseWeight: 1.0,
