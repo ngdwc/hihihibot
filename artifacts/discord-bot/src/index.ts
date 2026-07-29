@@ -40,6 +40,7 @@ import {
   handleTrongCay,
   handleThu,
   handleMuaDat,
+  handleBonPhan,
 } from "./commands/garden.js";
 import { handleTaixiu } from "./commands/taixiu.js";
 import { handleStock } from "./commands/stock.js";
@@ -271,6 +272,11 @@ client.on("messageCreate", async (message: Message) => {
       case "muadat":
       case "land":
         embed = await handleMuaDat(message, user);
+        break;
+
+      case "bonphan":
+      case "bp":
+        embed = await handleBonPhan(message, args, user);
         break;
 
       // ── Tài Xỉu ──────────────────────────────────────────────────────────

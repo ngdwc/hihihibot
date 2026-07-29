@@ -1,7 +1,18 @@
 import { EmbedBuilder, Message } from "discord.js";
 import {
-  DbUser, DbGarden, getOrCreateGarden, buyGardenLand, plantSeed, clearPlot,
-  removeInventoryItem, addInventoryItem, incrementStat, checkAndGrant, GARDEN_MAX_PLOTS,
+  DbUser,
+  DbGarden,
+  getOrCreateGarden,
+  buyGardenLand,
+  plantSeed,
+  clearPlot,
+  fertilizePlot,
+  removeInventoryItem,
+  addInventoryItem,
+  getItemQuantity,
+  incrementStat,
+  checkAndGrant,
+  GARDEN_MAX_PLOTS,
 } from "../db.js";
 import { fmt } from "../utils.js";
 
@@ -11,28 +22,155 @@ export interface PlantType {
   emoji: string;
   seedPrice: number;
   growMs: number;
-  sellPrice: number;  // giá bán cơ bản (trước khi tính cân nặng)
+  sellPrice: number; // giá bán cơ bản (trước khi tính cân nặng)
   baseWeight: number; // kg — random [baseWeight, 2×baseWeight] khi bán
 }
 
 export const PLANT_TYPES: PlantType[] = [
-  // ── Cây gốc (10 loại, thời gian chín giảm + giá tăng) ───────────────────
-  { id: "carrot",       name: "Cà rốt",        emoji: "🥕", seedPrice: 10_000,      growMs: 3   * 60_000,          sellPrice: 18_000,      baseWeight: 0.3  },
-  { id: "strawberry",   name: "Dâu tây",        emoji: "🍓", seedPrice: 25_000,      growMs: 8   * 60_000,          sellPrice: 50_000,      baseWeight: 0.2  },
-  { id: "cabbage",      name: "Bắp cải",        emoji: "🥬", seedPrice: 50_000,      growMs: 20  * 60_000,          sellPrice: 100_000,     baseWeight: 1.2  },
-  { id: "tomato",       name: "Cà chua",        emoji: "🍅", seedPrice: 100_000,     growMs: 40  * 60_000,          sellPrice: 220_000,     baseWeight: 0.4  },
-  { id: "pumpkin",      name: "Bí ngô",         emoji: "🎃", seedPrice: 250_000,     growMs: 90  * 60_000,          sellPrice: 600_000,     baseWeight: 2.0  },
-  { id: "watermelon",   name: "Dưa hấu",        emoji: "🍉", seedPrice: 500_000,     growMs: 2   * 60 * 60_000,     sellPrice: 1_300_000,   baseWeight: 5.0  },
-  { id: "grape",        name: "Nho",            emoji: "🍇", seedPrice: 1_000_000,   growMs: 3   * 60 * 60_000,     sellPrice: 2_500_000,   baseWeight: 0.8  },
-  { id: "pineapple",    name: "Dứa",            emoji: "🍍", seedPrice: 2_500_000,   growMs: 4   * 60 * 60_000,     sellPrice: 6_000_000,   baseWeight: 1.5  },
-  { id: "mango",        name: "Xoài",           emoji: "🥭", seedPrice: 3_000_000,   growMs: 8   * 60 * 60_000,     sellPrice: 12_000_000,  baseWeight: 0.4  },
-  { id: "diamond_tree", name: "Cây Kim Cương",  emoji: "💎", seedPrice: 10_000_000,  growMs: 24  * 60 * 60_000,     sellPrice: 28_000_000,  baseWeight: 0.05 },
-  // ── 5 loại cây mới ──────────────────────────────────────────────────────
-  { id: "apple",        name: "Táo",            emoji: "🍎", seedPrice: 200_000,     growMs: 60  * 60_000,          sellPrice: 650_000,     baseWeight: 0.3  },
-  { id: "tulip",        name: "Hoa Tulip",      emoji: "🌷", seedPrice: 500_000,     growMs: 90  * 60_000,          sellPrice: 2_000_000,   baseWeight: 0.15 },
-  { id: "sunflower",    name: "Hướng dương",    emoji: "🌻", seedPrice: 1_500_000,   growMs: 3   * 60 * 60_000,     sellPrice: 5_000_000,   baseWeight: 0.3  },
-  { id: "cherry",       name: "Anh đào",        emoji: "🍒", seedPrice: 5_000_000,   growMs: 6   * 60 * 60_000,     sellPrice: 18_000_000,  baseWeight: 0.1  },
-  { id: "dragon_cactus",name: "Cây Rồng",       emoji: "🌵", seedPrice: 20_000_000,  growMs: 48  * 60 * 60_000,     sellPrice: 70_000_000,  baseWeight: 1.0  },
+  {
+    id: "carrot",
+    name: "Cà rốt",
+    emoji: "🥕",
+    seedPrice: 10_000,
+    growMs: 3 * 60_000,
+    sellPrice: 18_000,
+    baseWeight: 0.3,
+  },
+  {
+    id: "strawberry",
+    name: "Dâu tây",
+    emoji: "🍓",
+    seedPrice: 25_000,
+    growMs: 8 * 60_000,
+    sellPrice: 50_000,
+    baseWeight: 0.2,
+  },
+  {
+    id: "cabbage",
+    name: "Bắp cải",
+    emoji: "🥬",
+    seedPrice: 50_000,
+    growMs: 20 * 60_000,
+    sellPrice: 100_000,
+    baseWeight: 1.2,
+  },
+  {
+    id: "tomato",
+    name: "Cà chua",
+    emoji: "🍅",
+    seedPrice: 100_000,
+    growMs: 40 * 60_000,
+    sellPrice: 220_000,
+    baseWeight: 0.4,
+  },
+  {
+    id: "pumpkin",
+    name: "Bí ngô",
+    emoji: "🎃",
+    seedPrice: 250_000,
+    growMs: 90 * 60_000,
+    sellPrice: 600_000,
+    baseWeight: 2.0,
+  },
+  {
+    id: "watermelon",
+    name: "Dưa hấu",
+    emoji: "🍉",
+    seedPrice: 500_000,
+    growMs: 2 * 60 * 60_000,
+    sellPrice: 1_300_000,
+    baseWeight: 5.0,
+  },
+  {
+    id: "grape",
+    name: "Nho",
+    emoji: "🍇",
+    seedPrice: 1_000_000,
+    growMs: 3 * 60 * 60_000,
+    sellPrice: 2_500_000,
+    baseWeight: 0.8,
+  },
+  {
+    id: "pineapple",
+    name: "Dứa",
+    emoji: "🍍",
+    seedPrice: 2_500_000,
+    growMs: 4 * 60 * 60_000,
+    sellPrice: 6_000_000,
+    baseWeight: 1.5,
+  },
+  {
+    id: "mango",
+    name: "Xoài",
+    emoji: "🥭",
+    seedPrice: 3_000_000,
+    growMs: 8 * 60 * 60_000,
+    sellPrice: 12_000_000,
+    baseWeight: 0.4,
+  },
+  {
+    id: "diamond_tree",
+    name: "Cây Kim Cương",
+    emoji: "💎",
+    seedPrice: 10_000_000,
+    growMs: 24 * 60 * 60_000,
+    sellPrice: 28_000_000,
+    baseWeight: 0.05,
+  },
+  {
+    id: "apple",
+    name: "Táo",
+    emoji: "🍎",
+    seedPrice: 200_000,
+    growMs: 60 * 60_000,
+    sellPrice: 650_000,
+    baseWeight: 0.3,
+  },
+  {
+    id: "tulip",
+    name: "Hoa Tulip",
+    emoji: "🌷",
+    seedPrice: 500_000,
+    growMs: 90 * 60_000,
+    sellPrice: 2_000_000,
+    baseWeight: 0.15,
+  },
+  {
+    id: "sunflower",
+    name: "Hướng dương",
+    emoji: "🌻",
+    seedPrice: 1_500_000,
+    growMs: 3 * 60 * 60_000,
+    sellPrice: 5_000_000,
+    baseWeight: 0.3,
+  },
+  {
+    id: "cherry",
+    name: "Anh đào",
+    emoji: "🍒",
+    seedPrice: 5_000_000,
+    growMs: 6 * 60 * 60_000,
+    sellPrice: 18_000_000,
+    baseWeight: 0.1,
+  },
+  {
+    id: "dragon_cactus",
+    name: "Cây Rồng",
+    emoji: "🌵",
+    seedPrice: 20_000_000,
+    growMs: 48 * 60 * 60_000,
+    sellPrice: 70_000_000,
+    baseWeight: 1.0,
+  },
+  {
+    id: "nhan_sam",
+    name: "Nhân sâm 36 nghìn năm",
+    emoji: "🫚",
+    seedPrice: 20_000_000,
+    growMs: 36000 * 60 * 60_000,
+    sellPrice: 70_000_000_000,
+    baseWeight: 1.0,
+  },
 ];
 
 export const LAND_PRICE = 50_000_000;
@@ -56,7 +194,10 @@ function formatDuration(ms: number): string {
 }
 
 function errEmbed(title: string, desc: string): EmbedBuilder {
-  return new EmbedBuilder().setColor("#FF4444").setTitle(title).setDescription(desc);
+  return new EmbedBuilder()
+    .setColor("#FF4444")
+    .setTitle(title)
+    .setDescription(desc);
 }
 
 function isRipe(plantedAt: number | null, plant: PlantType): boolean {
@@ -65,7 +206,10 @@ function isRipe(plantedAt: number | null, plant: PlantType): boolean {
 }
 
 // ── !garden / !vuon ──────────────────────────────────────────────────────────
-export async function handleGarden(message: Message, user: DbUser): Promise<EmbedBuilder> {
+export async function handleGarden(
+  message: Message,
+  user: DbUser,
+): Promise<EmbedBuilder> {
   const garden = await getOrCreateGarden(user.discord_id);
   const rows: string[] = [];
   const ripePlots: number[] = [];
@@ -75,8 +219,14 @@ export async function handleGarden(message: Message, user: DbUser): Promise<Embe
     for (let col = 0; col < GRID_COLS; col++) {
       const idx = row * GRID_COLS + col;
       const plot = garden.plots[idx];
-      if (idx >= garden.land) { rowStr += EMPTY_UNOWNED; continue; }
-      if (!plot?.plant_id) { rowStr += EMPTY_OWNED; continue; }
+      if (idx >= garden.land) {
+        rowStr += EMPTY_UNOWNED;
+        continue;
+      }
+      if (!plot?.plant_id) {
+        rowStr += EMPTY_OWNED;
+        continue;
+      }
       const plant = PLANT_TYPES.find((p) => p.id === plot.plant_id)!;
       rowStr += plant.emoji;
       if (isRipe(plot.planted_at, plant)) ripePlots.push(idx + 1);
@@ -91,28 +241,53 @@ export async function handleGarden(message: Message, user: DbUser): Promise<Embe
     .setTitle(`🌾 Vườn của ${message.author.username}`)
     .setDescription("```\n" + rows.join("\n") + "\n```")
     .addFields(
-      { name: "📏 Đất đã mở", value: `${garden.land} / ${GARDEN_MAX_PLOTS} ô`, inline: true },
-      { name: "💰 Giá mở đất", value: garden.land < GARDEN_MAX_PLOTS ? fmt(LAND_PRICE) : "Đã tối đa", inline: true },
+      {
+        name: "📏 Đất đã mở",
+        value: `${garden.land} / ${GARDEN_MAX_PLOTS} ô`,
+        inline: true,
+      },
+      {
+        name: "💰 Giá mở đất",
+        value: garden.land < GARDEN_MAX_PLOTS ? fmt(LAND_PRICE) : "Đã tối đa",
+        inline: true,
+      },
     )
-    .setFooter({ text: "⬛ chưa mua  🟫 đất trống  |  !trongcay <ô> <id_cây>  !thu <ô|all>  !muadat" });
+    .setFooter({
+      text: "⬛ chưa mua  🟫 đất trống  |  !trongcay <ô> <id_cây>  !thu <ô|all>  !muadat",
+    });
 
   if (ripePlots.length > 0) {
-    embed.addFields({ name: "✨ Sẵn sàng thu hoạch", value: ripePlots.join(", ") });
+    embed.addFields({
+      name: "✨ Sẵn sàng thu hoạch",
+      value: ripePlots.join(", "),
+    });
   }
   return embed;
 }
 
 // ── !plant <ô> ───────────────────────────────────────────────────────────────
-export async function handlePlantInfo(message: Message, args: string[], user: DbUser): Promise<EmbedBuilder> {
+export async function handlePlantInfo(
+  message: Message,
+  args: string[],
+  user: DbUser,
+): Promise<EmbedBuilder> {
   const plotNum = Number(args[0]);
   if (!plotNum || plotNum < 1 || plotNum > GARDEN_MAX_PLOTS) {
-    return errEmbed("❌ Sai cú pháp", `Dùng: \`!plant <ô 1-${GARDEN_MAX_PLOTS}>\``);
+    return errEmbed(
+      "❌ Sai cú pháp",
+      `Dùng: \`!plant <ô 1-${GARDEN_MAX_PLOTS}>\``,
+    );
   }
   const garden = await getOrCreateGarden(user.discord_id);
   const idx = plotNum - 1;
-  if (idx >= garden.land) return errEmbed("❌ Chưa mở khóa", `Ô **${plotNum}** chưa được mua. Dùng \`!muadat\`.`);
+  if (idx >= garden.land)
+    return errEmbed(
+      "❌ Chưa mở khóa",
+      `Ô **${plotNum}** chưa được mua. Dùng \`!muadat\`.`,
+    );
   const plot = garden.plots[idx];
-  if (!plot?.plant_id || !plot.planted_at) return errEmbed("❌ Ô trống", `Ô **${plotNum}** chưa trồng cây.`);
+  if (!plot?.plant_id || !plot.planted_at)
+    return errEmbed("❌ Ô trống", `Ô **${plotNum}** chưa trồng cây.`);
 
   const plant = PLANT_TYPES.find((p) => p.id === plot.plant_id)!;
   const remaining = plant.growMs - (Date.now() - plot.planted_at);
@@ -122,42 +297,86 @@ export async function handlePlantInfo(message: Message, args: string[], user: Db
     .setColor(ripe ? "#FFD700" : "#57C84D")
     .setTitle(`${plant.emoji} Ô ${plotNum} — ${plant.name} \`${plant.id}\``)
     .addFields(
-      { name: "⏳ Trạng thái", value: ripe ? "Đã chín ✨ — dùng `!thu " + plotNum + "`" : `Còn ${formatDuration(remaining)}`, inline: false },
+      {
+        name: "⏳ Trạng thái",
+        value: ripe
+          ? "Đã chín ✨ — dùng `!thu " + plotNum + "`"
+          : `Còn ${formatDuration(remaining)}`,
+        inline: false,
+      },
       { name: "💵 Giá bán cơ bản", value: fmt(plant.sellPrice), inline: true },
-      { name: "⚖️ Cân nặng cơ bản", value: `${plant.baseWeight} kg`, inline: true },
+      {
+        name: "⚖️ Cân nặng cơ bản",
+        value: `${plant.baseWeight} kg`,
+        inline: true,
+      },
     );
 }
 
 // ── !trongcay <ô> <cây> ──────────────────────────────────────────────────────
-export async function handleTrongCay(message: Message, args: string[], user: DbUser): Promise<EmbedBuilder> {
+export async function handleTrongCay(
+  message: Message,
+  args: string[],
+  user: DbUser,
+): Promise<EmbedBuilder> {
   const plotNum = Number(args[0]);
   const plantQuery = args[1];
 
   if (!plotNum || plotNum < 1 || plotNum > GARDEN_MAX_PLOTS || !plantQuery) {
-    return errEmbed("❌ Sai cú pháp", "Dùng: `!trongcay <ô> <id_cây>`\nVD: `!trongcay 1 carrot`\nDùng `!shop` trang 2/3 để xem hạt giống.");
+    return errEmbed(
+      "❌ Sai cú pháp",
+      "Dùng: `!trongcay <ô> <id_cây>`\nVD: `!trongcay 1 carrot`\nDùng `!shop` trang 2/3 để xem hạt giống.",
+    );
   }
 
   const plant = findPlant(plantQuery);
-  if (!plant) return errEmbed("❌ Không tìm thấy", `Không có cây nào khớp với \`${plantQuery}\`.`);
+  if (!plant)
+    return errEmbed(
+      "❌ Không tìm thấy",
+      `Không có cây nào khớp với \`${plantQuery}\`.`,
+    );
 
   const garden = await getOrCreateGarden(user.discord_id);
   const idx = plotNum - 1;
-  if (idx >= garden.land) return errEmbed("❌ Chưa mở khóa", `Ô **${plotNum}** chưa mua. Dùng \`!muadat\`.`);
-  if (garden.plots[idx]?.plant_id) return errEmbed("❌ Ô đã có cây", `Ô **${plotNum}** đã trồng rồi. Thu hoạch trước: \`!thu ${plotNum}\`.`);
+  if (idx >= garden.land)
+    return errEmbed(
+      "❌ Chưa mở khóa",
+      `Ô **${plotNum}** chưa mua. Dùng \`!muadat\`.`,
+    );
+  if (garden.plots[idx]?.plant_id)
+    return errEmbed(
+      "❌ Ô đã có cây",
+      `Ô **${plotNum}** đã trồng rồi. Thu hoạch trước: \`!thu ${plotNum}\`.`,
+    );
 
-  const hasSeed = await removeInventoryItem(user.discord_id, "seed", `seed_${plant.id}`, 1);
-  if (!hasSeed) return errEmbed("❌ Thiếu hạt giống", `Bạn không có hạt **${plant.name}**. Mua tại \`!shop\`.`);
+  const hasSeed = await removeInventoryItem(
+    user.discord_id,
+    "seed",
+    `seed_${plant.id}`,
+    1,
+  );
+  if (!hasSeed)
+    return errEmbed(
+      "❌ Thiếu hạt giống",
+      `Bạn không có hạt **${plant.name}**. Mua tại \`!shop\`.`,
+    );
 
   await plantSeed(user.discord_id, idx, plant.id);
 
   return new EmbedBuilder()
     .setColor("#57C84D")
     .setTitle(`${plant.emoji} Đã trồng ${plant.name}!`)
-    .setDescription(`Ô **${plotNum}** sẽ chín sau **${formatDuration(plant.growMs)}**.`);
+    .setDescription(
+      `Ô **${plotNum}** sẽ chín sau **${formatDuration(plant.growMs)}**.`,
+    );
 }
 
 // ── !thu <ô|all> ─────────────────────────────────────────────────────────────
-export async function handleThu(message: Message, args: string[], user: DbUser): Promise<EmbedBuilder> {
+export async function handleThu(
+  message: Message,
+  args: string[],
+  user: DbUser,
+): Promise<EmbedBuilder> {
   const garden = await getOrCreateGarden(user.discord_id);
 
   if (args[0]?.toLowerCase() === "all") {
@@ -179,11 +398,16 @@ export async function handleThu(message: Message, args: string[], user: DbUser):
       else collected.set(plant.id, { plant, qty: 1 });
     }
 
-    if (count === 0) return errEmbed("❌ Chưa có gì để thu", "Không có ô nào đã chín cả.");
+    if (count === 0)
+      return errEmbed("❌ Chưa có gì để thu", "Không có ô nào đã chín cả.");
 
     await incrementStat(user.discord_id, "harvestCount", count);
     const newHarvestCount = (user.harvest_count ?? 0) + count;
-    const earnedFarmer = await checkAndGrant(user.discord_id, "farmer", newHarvestCount >= 100);
+    const earnedFarmer = await checkAndGrant(
+      user.discord_id,
+      "farmer",
+      newHarvestCount >= 100,
+    );
 
     let totalWeight = 0;
     const lines = Array.from(collected.values()).map(({ plant, qty }) => {
@@ -196,59 +420,193 @@ export async function handleThu(message: Message, args: string[], user: DbUser):
     const embed = new EmbedBuilder()
       .setColor("#FFD700")
       .setTitle("🌾 Thu hoạch hàng loạt!")
-      .setDescription(`Thu **${count}** ô vào túi đồ!\n${lines.join("\n")}\n\nDùng \`$sell plant <id> <số>\` để bán.`)
-      .addFields({ name: "⚖️ Tổng cân nặng", value: `${totalWeight.toFixed(2)} kg`, inline: true });
+      .setDescription(
+        `Thu **${count}** ô vào túi đồ!\n${lines.join("\n")}\n\nDùng \`$sell plant <id> <số>\` để bán.`,
+      )
+      .addFields({
+        name: "⚖️ Tổng cân nặng",
+        value: `${totalWeight.toFixed(2)} kg`,
+        inline: true,
+      });
 
-    if (earnedFarmer) embed.addFields({ name: "🏆 Thành tựu mới!", value: "🌾 **Nông Dân Chăm Chỉ** — Thu hoạch 100 lần!" });
+    if (earnedFarmer)
+      embed.addFields({
+        name: "🏆 Thành tựu mới!",
+        value: "🌾 **Nông Dân Chăm Chỉ** — Thu hoạch 100 lần!",
+      });
     return embed;
   }
 
   const plotNum = Number(args[0]);
   if (!plotNum || plotNum < 1 || plotNum > GARDEN_MAX_PLOTS) {
-    return errEmbed("❌ Sai cú pháp", `Dùng: \`!thu <ô 1-${GARDEN_MAX_PLOTS}>\` hoặc \`!thu all\``);
+    return errEmbed(
+      "❌ Sai cú pháp",
+      `Dùng: \`!thu <ô 1-${GARDEN_MAX_PLOTS}>\` hoặc \`!thu all\``,
+    );
   }
 
   const idx = plotNum - 1;
-  if (idx >= garden.land) return errEmbed("❌ Chưa mở khóa", `Ô **${plotNum}** chưa mua.`);
+  if (idx >= garden.land)
+    return errEmbed("❌ Chưa mở khóa", `Ô **${plotNum}** chưa mua.`);
 
   const plot = garden.plots[idx];
-  if (!plot?.plant_id || !plot.planted_at) return errEmbed("❌ Ô trống", `Ô **${plotNum}** chưa trồng cây.`);
+  if (!plot?.plant_id || !plot.planted_at)
+    return errEmbed("❌ Ô trống", `Ô **${plotNum}** chưa trồng cây.`);
 
   const plant = PLANT_TYPES.find((p) => p.id === plot.plant_id)!;
   if (!isRipe(plot.planted_at, plant)) {
-    return errEmbed("⏳ Chưa chín", `Ô **${plotNum}** cần thêm **${formatDuration(plant.growMs - (Date.now() - plot.planted_at))}** nữa.`);
+    return errEmbed(
+      "⏳ Chưa chín",
+      `Ô **${plotNum}** cần thêm **${formatDuration(plant.growMs - (Date.now() - plot.planted_at))}** nữa.`,
+    );
   }
 
   await clearPlot(user.discord_id, idx);
   await addInventoryItem(user.discord_id, "plant", plant.id, 1);
   await incrementStat(user.discord_id, "harvestCount");
   const newHarvestCount = (user.harvest_count ?? 0) + 1;
-  const earnedFarmer = await checkAndGrant(user.discord_id, "farmer", newHarvestCount >= 100);
+  const earnedFarmer = await checkAndGrant(
+    user.discord_id,
+    "farmer",
+    newHarvestCount >= 100,
+  );
 
   const harvestWeight = plant.baseWeight + Math.random() * plant.baseWeight;
 
   const embed = new EmbedBuilder()
     .setColor("#FFD700")
     .setTitle(`${plant.emoji} Thu hoạch thành công!`)
-    .setDescription(`**${plant.name}** \`${plant.id}\` đã vào túi đồ!\nDùng \`$sell plant ${plant.id} 1\` để bán.`)
-    .addFields({ name: "⚖️ Cân nặng", value: `${harvestWeight.toFixed(2)} kg`, inline: true });
+    .setDescription(
+      `**${plant.name}** \`${plant.id}\` đã vào túi đồ!\nDùng \`$sell plant ${plant.id} 1\` để bán.`,
+    )
+    .addFields({
+      name: "⚖️ Cân nặng",
+      value: `${harvestWeight.toFixed(2)} kg`,
+      inline: true,
+    });
 
-  if (earnedFarmer) embed.addFields({ name: "🏆 Thành tựu mới!", value: "🌾 **Nông Dân Chăm Chỉ** — Thu hoạch 100 lần!" });
+  if (earnedFarmer)
+    embed.addFields({
+      name: "🏆 Thành tựu mới!",
+      value: "🌾 **Nông Dân Chăm Chỉ** — Thu hoạch 100 lần!",
+    });
+  return embed;
+}
+
+// ── !bonphan <ô> <số lượng> ──────────────────────────────────────────────────
+const FERTILIZE_REDUCTION_MS = 5 * 60_000; // 5 phút mỗi cứt
+
+export async function handleBonPhan(
+  message: Message,
+  args: string[],
+  user: DbUser,
+): Promise<EmbedBuilder> {
+  const plotNum = Number(args[0]);
+  const qty = Number(args[1]);
+
+  if (!plotNum || plotNum < 1 || plotNum > GARDEN_MAX_PLOTS || !qty || qty < 1 || !Number.isInteger(qty)) {
+    return errEmbed(
+      "❌ Sai cú pháp",
+      `Dùng: \`!bonphan <ô> <số lượng cứt>\`\nVD: \`!bonphan 1 3\` — bón 3 cứt vào ô 1, giảm **15 phút** thời gian chín.`,
+    );
+  }
+
+  const garden = await getOrCreateGarden(user.discord_id);
+  const idx = plotNum - 1;
+
+  if (idx >= garden.land) {
+    return errEmbed("❌ Chưa mở khóa", `Ô **${plotNum}** chưa mua. Dùng \`!muadat\`.`);
+  }
+
+  const plot = garden.plots[idx];
+  if (!plot?.plant_id || !plot.planted_at) {
+    return errEmbed("❌ Ô trống", `Ô **${plotNum}** chưa trồng cây.`);
+  }
+
+  const plant = PLANT_TYPES.find((p) => p.id === plot.plant_id)!;
+
+  // Kiểm tra đã chín chưa
+  if (isRipe(plot.planted_at, plant)) {
+    return errEmbed("✨ Đã chín rồi", `Ô **${plotNum}** đã chín rồi! Dùng \`!thu ${plotNum}\` để thu hoạch.`);
+  }
+
+  // Kiểm tra số cứt trong kho
+  const poopOwned = await getItemQuantity(user.discord_id, "ore", "poop");
+  if (poopOwned < qty) {
+    return errEmbed(
+      "❌ Không đủ cứt",
+      `Bạn chỉ có **${poopOwned} cứt** trong kho. Đào thêm bằng \`!mine\`.`,
+    );
+  }
+
+  // Tính thời gian giảm thực tế (không giảm quá thời điểm chín)
+  const remaining = plant.growMs - (Date.now() - plot.planted_at);
+  const maxReductionMs = remaining; // không cho lùi quá thời điểm chín
+  const requestedReductionMs = qty * FERTILIZE_REDUCTION_MS;
+  const actualReductionMs = Math.min(requestedReductionMs, maxReductionMs);
+  const actualQtyUsed = Math.ceil(actualReductionMs / FERTILIZE_REDUCTION_MS);
+
+  // Trừ cứt và bón
+  await Promise.all([
+    removeInventoryItem(user.discord_id, "ore", "poop", actualQtyUsed),
+    fertilizePlot(user.discord_id, idx, actualReductionMs),
+  ]);
+
+  const newRemaining = remaining - actualReductionMs;
+  const isNowRipe = newRemaining <= 0;
+
+  const embed = new EmbedBuilder()
+    .setColor("#8B4513")
+    .setTitle(`💩 Bón phân thành công!`)
+    .setDescription(
+      `Đã dùng **${actualQtyUsed} cứt** bón cho ô **${plotNum}** (${plant.emoji} ${plant.name}).`,
+    )
+    .addFields(
+      {
+        name: "⏱️ Giảm thời gian",
+        value: `**${formatDuration(actualReductionMs)}**`,
+        inline: true,
+      },
+      {
+        name: "⏳ Còn lại",
+        value: isNowRipe ? "✨ Đã chín — dùng `!thu " + plotNum + "`" : formatDuration(newRemaining),
+        inline: true,
+      },
+    );
+
+  if (actualQtyUsed < qty) {
+    embed.addFields({
+      name: "ℹ️ Lưu ý",
+      value: `Chỉ dùng **${actualQtyUsed}** cứt (cây đã chín sớm hơn dự kiến).`,
+    });
+  }
+
   return embed;
 }
 
 // ── !muadat ──────────────────────────────────────────────────────────────────
-export async function handleMuaDat(message: Message, user: DbUser): Promise<EmbedBuilder> {
+export async function handleMuaDat(
+  message: Message,
+  user: DbUser,
+): Promise<EmbedBuilder> {
   const garden = await getOrCreateGarden(user.discord_id);
   if (garden.land >= GARDEN_MAX_PLOTS) {
-    return errEmbed("❌ Đã tối đa", `Bạn đã sở hữu tối đa **${GARDEN_MAX_PLOTS}** ô.`);
+    return errEmbed(
+      "❌ Đã tối đa",
+      `Bạn đã sở hữu tối đa **${GARDEN_MAX_PLOTS}** ô.`,
+    );
   }
   if (Number(user.money) < LAND_PRICE) {
-    return errEmbed("❌ Không đủ tiền", `Cần **${fmt(LAND_PRICE)}**. Hiện có **${fmt(Number(user.money))}**.`);
+    return errEmbed(
+      "❌ Không đủ tiền",
+      `Cần **${fmt(LAND_PRICE)}**. Hiện có **${fmt(Number(user.money))}**.`,
+    );
   }
   const newLand = await buyGardenLand(user.discord_id, LAND_PRICE);
   return new EmbedBuilder()
     .setColor("#57C84D")
     .setTitle("🟫 Mua đất thành công!")
-    .setDescription(`Bạn hiện sở hữu **${newLand} / ${GARDEN_MAX_PLOTS}** ô đất.`);
+    .setDescription(
+      `Bạn hiện sở hữu **${newLand} / ${GARDEN_MAX_PLOTS}** ô đất.`,
+    );
 }

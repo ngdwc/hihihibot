@@ -578,6 +578,26 @@ export async function clearPlot(discordId: string, plotIndex: number): Promise<v
   );
 }
 
+/**
+ * Bón phân: dịch plantedAt lùi lại reductionMs (làm cây chín sớm hơn).
+ * Trả về thời gian còn lại sau khi bón (ms), hoặc 0 nếu đã chín.
+ */
+export async function fertilizePlot(
+  discordId: string,
+  plotIndex: number,
+  reductionMs: number,
+): Promise<void> {
+  const doc = await GardenModel.findOne({ discordId });
+  if (!doc) return;
+  const plot = doc.plots[plotIndex];
+  if (!plot?.plantedAt) return;
+  const newPlantedAt = new Date(plot.plantedAt.getTime() - reductionMs);
+  await GardenModel.updateOne(
+    { discordId },
+    { $set: { [`plots.${plotIndex}.plantedAt`]: newPlantedAt } },
+  );
+}
+
 // ─── Tài Xỉu helpers ──────────────────────────────────────────────────────────
 
 export async function getTaixiuBetAmount(discordId: string): Promise<number> {
