@@ -31,11 +31,11 @@ function parseNames(args: string[]): { name1: string; name2: string } | null {
 }
 
 function describeCompatibility(percent: number): string {
-  if (percent >= 90) return "Cặp đôi hoàn hảo 💖";
-  if (percent >= 75) return "Rất hợp nhau 💘";
-  if (percent >= 60) return "Khá hợp 💞";
+  if (percent >= 90) return "Yêu Mẹ Đi 💖";
+  if (percent >= 75) return "Yêu Được 💘";
+  if (percent >= 60) return "Tạm Tạm 💞";
   if (percent >= 45) return "Bình thường 🤝";
-  if (percent >= 25) return "Khó hòa hợp 😕";
+  if (percent >= 25) return "Khỏi yêu nhé 😕";
   return "Rất không hợp 💔";
 }
 
