@@ -44,6 +44,7 @@ import {
 } from "./commands/garden.js";
 import { handleTaixiu } from "./commands/taixiu.js";
 import { handleStock } from "./commands/stock.js";
+import { handleLoveCalc } from "./commands/lovecalc.js";
 import { handleVirtueVault } from "./commands/virtue-vault.js";
 import { containsBadWord } from "./badwords.js";
 
@@ -283,6 +284,11 @@ client.on("messageCreate", async (message: Message) => {
       case "taixiu":
       case "tx":
         embed = await handleTaixiu(message, args, user);
+        break;
+
+      case "lovecalc":
+      case "love":
+        embed = await handleLoveCalc(message, args);
         break;
 
       case "thien":

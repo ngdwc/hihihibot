@@ -77,7 +77,11 @@ export async function handleHelp(_message: Message): Promise<EmbedBuilder> {
         ].join("\n"),
       },
       {
-        name: "🛒 Cửa hàng",
+        name: "� Tình yêu",
+        value: "`!lovecalc \"tên người thứ nhất\" \"tên người thứ hai\"` — Tính điểm hợp nhau",
+      },
+      {
+        name: "�🛒 Cửa hàng",
         value: [
           "`!shop` — Xem danh sách vật phẩm",
           "`!buy <số thứ tự>` — Mua vật phẩm",
