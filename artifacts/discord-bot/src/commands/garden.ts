@@ -504,7 +504,14 @@ export async function handleBonPhan(
   const plotNum = Number(args[0]);
   const qty = Number(args[1]);
 
-  if (!plotNum || plotNum < 1 || plotNum > GARDEN_MAX_PLOTS || !qty || qty < 1 || !Number.isInteger(qty)) {
+  if (
+    !plotNum ||
+    plotNum < 1 ||
+    plotNum > GARDEN_MAX_PLOTS ||
+    !qty ||
+    qty < 1 ||
+    !Number.isInteger(qty)
+  ) {
     return errEmbed(
       "❌ Sai cú pháp",
       `Dùng: \`!bonphan <ô> <số lượng drop phụ>\`\nVD: \`!bonphan 1 3\` — bón 3 drop phụ vào ô 1, giảm **15 phút** thời gian chín.`,
@@ -515,7 +522,10 @@ export async function handleBonPhan(
   const idx = plotNum - 1;
 
   if (idx >= garden.land) {
-    return errEmbed("❌ Chưa mở khóa", `Ô **${plotNum}** chưa mua. Dùng \`!muadat\`.`);
+    return errEmbed(
+      "❌ Chưa mở khóa",
+      `Ô **${plotNum}** chưa mua. Dùng \`!muadat\`.`,
+    );
   }
 
   const plot = garden.plots[idx];
@@ -527,7 +537,10 @@ export async function handleBonPhan(
 
   // Kiểm tra đã chín chưa
   if (isRipe(plot.planted_at, plant)) {
-    return errEmbed("✨ Đã chín rồi", `Ô **${plotNum}** đã chín rồi! Dùng \`!thu ${plotNum}\` để thu hoạch.`);
+    return errEmbed(
+      "✨ Đã chín rồi",
+      `Ô **${plotNum}** đã chín rồi! Dùng \`!thu ${plotNum}\` để thu hoạch.`,
+    );
   }
 
   // Kiểm tra số drop phụ trong kho
@@ -559,7 +572,7 @@ export async function handleBonPhan(
     .setColor("#8B4513")
     .setTitle(`💩 Bón phân thành công!`)
     .setDescription(
-      `Đã dùng **${actualQtyUsed} drop phụ** bón cho ô **${plotNum}** (${plant.emoji} ${plant.name}).`,
+      `Đã dùng **${actualQtyUsed} Cứt** bón cho ô **${plotNum}** (${plant.emoji} ${plant.name}).`,
     )
     .addFields(
       {
@@ -569,7 +582,9 @@ export async function handleBonPhan(
       },
       {
         name: "⏳ Còn lại",
-        value: isNowRipe ? "✨ Đã chín — dùng `!thu " + plotNum + "`" : formatDuration(newRemaining),
+        value: isNowRipe
+          ? "✨ Đã chín — dùng `!thu " + plotNum + "`"
+          : formatDuration(newRemaining),
         inline: true,
       },
     );

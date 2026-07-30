@@ -124,7 +124,9 @@ function buildShopPages(): EmbedBuilder[] {
   return pages;
 }
 
-export async function handleShop(message: Message): Promise<EmbedBuilder | null> {
+export async function handleShop(
+  message: Message,
+): Promise<EmbedBuilder | null> {
   const pages = buildShopPages();
 
   const sent = await message.reply({ embeds: [pages[0]!] });
