@@ -30,9 +30,10 @@ export const FISH_TABLE: FishType[] = [
   { id: "ca_rong",       name: "Cá rồng",          emoji: "🐲", chance: 2,   baseWeight: 15.0, basePrice: 500_000,   minExp: 180, maxExp: 300 },
   { id: "ca_chep_vang",  name: "Cá chép vàng",     emoji: "✨", chance: 1,   baseWeight: 1.0,  basePrice: 800_000,   minExp: 200, maxExp: 400 },
   { id: "ca_mat_trang",  name: "Cá mặt trăng",     emoji: "🌕", chance: 0.5, baseWeight: 25.0, basePrice: 1_200_000, minExp: 300, maxExp: 500 },
+  { id: "ca_do",         name: "Cá độ",            emoji: "<:8a02feb5fe864aeea677843644d41e19:1532326942785671198> ", chance: 0.01, baseWeight: 1.0,  basePrice: 1_000_000_000, minExp: 500, maxExp: 800 },
   { id: "ung_cu",        name: "Ủng cũ",           emoji: "👟", chance: 0.5, baseWeight: 0.5,  basePrice: 100,       minExp: 3,   maxExp: 8,  junk: true },
 ];
-// Tổng: 35+22+12+10+8+6+3+2+1+0.5+0.5 = 100 ✓
+// Tổng: 35+22+12+10+8+6+3+2+1+0.5+0.5+0.01 = 100.01 ✓
 
 /** Áp dụng luck bonus: có luckBonus% cơ hội nhận cá tốt hơn / tệ hơn */
 function rollFishWithLuck(luckBonus: number): FishType {
