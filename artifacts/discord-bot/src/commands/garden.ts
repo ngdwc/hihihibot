@@ -173,7 +173,7 @@ export const PLANT_TYPES: PlantType[] = [
   },
 ];
 
-export const LAND_PRICE = 50_000_000;
+export const LAND_PRICE = 75_000_000;
 const GRID_COLS = 8;
 const GRID_ROWS = GARDEN_MAX_PLOTS / GRID_COLS;
 const EMPTY_UNOWNED = "⬛";
@@ -494,7 +494,7 @@ export async function handleThu(
 }
 
 // ── !bonphan <ô> <số lượng> ──────────────────────────────────────────────────
-const FERTILIZE_REDUCTION_MS = 5 * 60_000; // 5 phút mỗi drop phụ
+const FERTILIZE_REDUCTION_MS = 20 * 60_000; // 5 phút mỗi drop phụ
 
 export async function handleBonPhan(
   message: Message,
@@ -592,7 +592,7 @@ export async function handleBonPhan(
   if (actualQtyUsed < qty) {
     embed.addFields({
       name: "ℹ️ Lưu ý",
-      value: `Chỉ dùng **${actualQtyUsed}** drop phụ (cây đã chín sớm hơn dự kiến).`,
+      value: `Chỉ dùng **${actualQtyUsed}** cứt (cây đã chín sớm hơn dự kiến).`,
     });
   }
 
