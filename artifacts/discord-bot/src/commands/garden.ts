@@ -171,9 +171,27 @@ export const PLANT_TYPES: PlantType[] = [
     sellPrice: 70_000_000_000,
     baseWeight: 1.0,
   },
+  {
+    id: "dua_luoi",
+    name: "Dưa Lưới",
+    emoji: "🍈",
+    seedPrice: 10_000_000,
+    growMs: 4 * 60 * 60_000,
+    sellPrice: 25_000_000,
+    baseWeight: 1.0,
+  },
+  {
+    id: "hong_xiem",
+    name: "Hồng Xiêm",
+    emoji: "[đây là hồng xiêm]",
+    seedPrice: 10_000_000,
+    growMs: 4 * 60 * 60_000,
+    sellPrice: 25_000_000,
+    baseWeight: 1.0,
+  }
 ];
 
-export const LAND_PRICE = 75_000_000;
+export const LAND_PRICE = 250_000_000;
 const GRID_COLS = 8;
 const GRID_ROWS = GARDEN_MAX_PLOTS / GRID_COLS;
 const EMPTY_UNOWNED = "⬛";
